@@ -1,0 +1,47 @@
+use serde::{Deserialize, Serialize};
+
+pub const BASE_URL: &str = "127.0.0.1/api/v1/charon";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ghost {
+    pub id: String,
+    pub hostname: String,
+    pub os: String,
+    pub last_seen: i64
+}
+
+#[derive(Serialize)]
+pub struct TaskRequest {
+    pub command: String,
+    pub args: String
+}
+
+pub async fn fetch_ghosts() -> Result<Vec<Ghost>, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/ghosts", BASE_URL);
+
+    match client.get(&url).send().await {
+        Ok(res) => match res.json::<Vec<Ghost>>().await {
+            Ok(ghosts) => Ok(ghosts),
+            Err(_) => Err("failed to parse JSON".to_string())
+        },
+        Err(_) => Err("connection failed".to_string())
+    }
+}
+
+pub async fn send_task(ghost_id: String, command: String, args: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/ghosts/{}/task", BASE_URL, ghost_id);
+    let body = TaskRequest { command, args };
+
+    match client.post(&url).json(&body).send().await {
+        Ok(res) => {
+            if res.status().is_success() {
+                Ok("task queued successfully".to_string())
+            } else {
+                Err(format!("ERROR returned status {}", res.status()))
+            }
+        },
+        Err(e) => Err(format!("ERROR {}", e))
+    }
+} 
