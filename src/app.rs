@@ -114,7 +114,7 @@ impl App {
 
                     self.status_message = format!("UPDATED {} ghosts online", self.ghosts.len());
                 },
-                Err(e) => self.status_message = format!("ERROR {}", e)
+                Err(e) => self.status_message = format!("[!] ERROR {}", e)
             },
             NetworkEvent::TaskSent(result) => match result {
                 Ok(message) => self.status_message = format!("SUCCESS {}", message),

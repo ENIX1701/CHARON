@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const BASE_URL: &str = "127.0.0.1/api/v1/charon";
+pub const BASE_URL: &str = "http://127.0.0.1:9999/api/v1/charon";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ghost {
