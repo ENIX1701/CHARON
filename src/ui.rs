@@ -83,14 +83,86 @@ fn render_dashboard(f: &mut Frame, app: &mut App, area: Rect) {
     )
     .header(header)
     .block(Block::default().borders(Borders::ALL).title(" ROAMING GHOSTs "))
-    .highlight_style(Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow))
+    .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow))
     .highlight_symbol(">> ");
 
     f.render_stateful_widget(t, area, &mut app.ghost_table_state);
 }
 
 fn render_builder(f: &mut Frame, app: &mut App, area: Rect) {
-    todo!("builder component")
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50)
+        ])
+        .split(area);
+
+    // reuse dashboard for efficiency
+    // let the user select a target
+    render_dashboard(f, app, chunks[0]);
+
+    // render input as the bottom half
+    let selected_ghost_name = if let Some(idx) = app.selected_ghost_index {
+        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("no GHOST selected")
+    } else {
+        "no GHOST selected"
+    };
+
+    // style based on state
+    // input mode will look different to normal mode
+    // overall a good ux practice
+    let (border_color, title, instructions) = if app.state == AppState::Input {
+        (
+            Color::Yellow,
+            " COMMAND INPUT (TYPING) ",
+            vec![
+                Span::raw("press "),
+                Span::styled("esc", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to cancel "),
+                Span::styled("enter", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to send task "),
+            ]
+        )
+    } else {
+        (
+            Color::White,
+            " COMMAND PREVIEW ",
+            vec![
+                Span::raw("press "),
+                Span::styled("i", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to enter command mode "),
+            ]
+        )
+    };
+
+    // special char simulating terminal cursor
+    // will be left here if it ends up working fine
+    let cursor = if app.state == AppState::Input { "█" } else { "" };
+
+    let text = vec![
+        Line::from(vec![
+            Span::styled("TARGET GHOST: ", Style::default().fg(Color::Cyan)),
+            Span::styled(selected_ghost_name, Style::default().add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("> ", Style::default().fg(Color::Cyan)),
+            Span::styled(format!("{}{}", app.input_buffer, cursor), Style::default().fg(Color::White))
+        ]),
+        Line::from(instructions).style(Style::default().add_modifier(Modifier::DIM))
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border_color))
+        .title(title);
+
+    let p = Paragraph::new(text)
+        .block(block)
+        .wrap(Wrap { trim: false });
+
+    f.render_widget(p, chunks[1]);
 }
 
 fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
