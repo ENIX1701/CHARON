@@ -13,6 +13,15 @@ CHARON is the terminal user interface for managing SHADOW.
 
 ## How to run
 
+### Development use
+
+Run the app by executing:
+```bash
+cargo run
+```
+
+### Production use
+
 > TODO
 
 ## TODO
@@ -24,6 +33,9 @@ CHARON is the terminal user interface for managing SHADOW.
 - [ ] live implant panel (live/dead GHOSTs)
 - [ ] [EXTRA] builder for GHOST payloads
 - [ ] [EXTRA] local cache (preferably a database; would be nice if it also cached requests)
+- [ ] design a better structure, as cramming everything into a single file will quickly become highly unmaintainable (I think xD)
+- [ ] [EXTRA] add a help section with guide on how to use the currently active window
+- [ ] ship the readme from current work in progress to a polished, user friendly one (will probably also keep the TODO thing, but it a separate README, or in a roadmap type section [or track them on the kanban, also a cool option!!])
 
 ## Legal
 
