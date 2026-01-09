@@ -17,11 +17,13 @@ CHARON is the terminal user interface for managing SHADOW.
 
 ## TODO
 
-- [ ] create a moodboard of designs (preferably ASCII art, it's really pretty)
+- [x] how should SHADOW be deployed to enable this sort of orchestration? docker, service, etc? -> a multi-stage Docker file (first build, then lightweight runtime)
+- [x] create a moodboard of designs (preferably ASCII art, it's really pretty)
 - [ ] basic menu panel
 - [ ] SHADOW integration
 - [ ] live implant panel (live/dead GHOSTs)
-- [ ] builder for GHOST payloads
+- [ ] [EXTRA] builder for GHOST payloads
+- [ ] [EXTRA] local cache (preferably a database; would be nice if it also cached requests)
 
 ## Legal
 
