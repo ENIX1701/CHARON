@@ -1,6 +1,6 @@
-use crate::client::{self, Ghost};
+use crate::client::{self, Ghost, Task};
 use crossterm::event::KeyCode;
-use ratatui::widgets::TableState;
+use ratatui::widgets::{ListState, TableState};
 use tokio::sync::mpsc;
 
 #[derive(PartialEq)]
@@ -12,19 +12,25 @@ pub enum AppState {
 
 pub enum NetworkEvent {
     GhostsFetched(Result<Vec<Ghost>, String>),
+    TasksFetched(Result<Vec<Task>, String>),
     TaskSent(Result<String, String>)
 }
 
 pub struct App {
     pub current_tab: usize,
     pub state: AppState,
+
     pub ghosts: Vec<Ghost>,
     pub ghost_table_state: TableState,
-
-    pub input_buffer: String,
     pub selected_ghost_index: Option<usize>,
-    pub status_message: String,
 
+    pub tasks: Vec<Task>,
+    pub task_list_state: ListState,
+    pub input_buffer: String,
+
+    pub should_scroll: bool,
+
+    pub status_message: String,
     pub network_tx: mpsc::Sender<NetworkEvent>,
     pub network_rx: mpsc::Receiver<NetworkEvent>,
 
@@ -39,8 +45,11 @@ impl App {
             state: AppState::Normal,
             ghosts: vec![],
             ghost_table_state: TableState::default(),
-            input_buffer: String::new(),
             selected_ghost_index: None,
+            tasks: vec![],
+            task_list_state: ListState::default(),
+            input_buffer: String::new(),
+            should_scroll: false,
             status_message: "READY press \'h\' for help".to_string(),
             network_tx: tx,
             network_rx: rx,
@@ -53,6 +62,11 @@ impl App {
 
     pub fn next_tab(&mut self) {
         self.current_tab = (self.current_tab + 1) % 2;
+
+        if self.current_tab == 1 {
+            self.refresh_tasks();
+            self.should_scroll = true;
+        }
     }
 
     pub fn toggle_help(&mut self) {
@@ -70,6 +84,10 @@ impl App {
         if self.tick_count % 50 == 0 {
             self.refresh_ghosts();
         }
+
+        if self.current_tab == 1 && self.tick_count % 10 == 0 {
+            self.refresh_tasks();
+        }
     }
     
     pub fn refresh_ghosts(&mut self) {
@@ -78,6 +96,19 @@ impl App {
             let res = client::fetch_ghosts().await;
             let _ = tx.send(NetworkEvent::GhostsFetched(res)).await;
         });
+    }
+
+    pub fn refresh_tasks(&mut self) {
+        if let Some(idx) = self.selected_ghost_index {
+            if let Some(ghost) = self.ghosts.get(idx) {
+                let id = ghost.id.clone();
+                let tx = self.network_tx.clone();
+                tokio::spawn(async move {
+                    let res = client::fetch_tasks(id).await;
+                    let _ = tx.send(NetworkEvent::TasksFetched(res)).await;
+                });
+            }
+        }
     }
 
     pub fn send_current_command(&mut self) {
@@ -98,6 +129,7 @@ impl App {
 
                 self.status_message = "sending task".to_string();
                 self.input_buffer.clear();
+                self.should_scroll = true;
             }
         }
     }
@@ -107,17 +139,39 @@ impl App {
             NetworkEvent::GhostsFetched(result) => match result {
                 Ok(data) => {
                     self.ghosts = data;
-
-                    if self.ghosts.len() > 0 && self.ghost_table_state.selected().is_none() {
+                    if !self.ghosts.is_empty() && self.ghost_table_state.selected().is_none() {
                         self.ghost_table_state.select(Some(0));
+                        self.selected_ghost_index = Some(0);
                     }
 
                     self.status_message = format!("UPDATED {} ghosts online", self.ghosts.len());
                 },
                 Err(e) => self.status_message = format!("[!] ERROR {}", e)
             },
+            NetworkEvent::TasksFetched(result) => match result {
+                Ok(data) => {
+                    let new_count = data.len();
+                    let old_count = self.tasks.len();
+
+                    // if new task (if) or response (else if) then scroll
+                    if new_count > old_count {
+                        self.should_scroll = true;
+                    } else if let (Some(new_last), Some(old_last)) = (data.last(), self.tasks.last()) {
+                        if new_last.id == old_last.id && new_last.status != old_last.status {
+                            self.should_scroll = true;
+                        }
+                    }
+
+                    self.tasks = data;
+                },
+                Err(_) => {}
+            },
             NetworkEvent::TaskSent(result) => match result {
-                Ok(message) => self.status_message = format!("SUCCESS {}", message),
+                Ok(message) => {
+                    self.status_message = format!("SUCCESS {}", message);
+                    self.refresh_tasks();
+                    self.should_scroll = true;
+                },
                 Err(e) => self.status_message = format!("ERROR {}", e)
             }
         }
@@ -127,6 +181,14 @@ impl App {
         match key {
             KeyCode::Down => self.next_ghost(),
             KeyCode::Up => self.prev_ghost(),
+            KeyCode::Enter if self.current_tab == 0 => {
+                if self.selected_ghost_index.is_some() {
+                    self.current_tab = 1;
+                    self.refresh_tasks();
+                    self.should_scroll = true;
+                    self.state = AppState::Input;
+                }
+            },
             KeyCode::Char('i') if self.current_tab == 1 => {
                 self.state = AppState::Input;
             },
@@ -139,7 +201,6 @@ impl App {
             KeyCode::Esc => self.state = AppState::Normal,
             KeyCode::Enter => {
                 self.send_current_command();
-                self.state = AppState::Normal;
             },
             KeyCode::Char(c) => self.input_buffer.push(c),
             KeyCode::Backspace => { self.input_buffer.pop(); },
@@ -155,6 +216,12 @@ impl App {
 
         self.ghost_table_state.select(Some(i));
         self.selected_ghost_index = Some(i);
+
+        if self.current_tab == 1 {
+            self.tasks.clear();
+            self.refresh_tasks();
+            self.should_scroll = true;
+        }
     }
 
     pub fn prev_ghost(&mut self) {
@@ -165,5 +232,11 @@ impl App {
 
         self.ghost_table_state.select(Some(i));
         self.selected_ghost_index = Some(i);
+
+        if self.current_tab == 1 {
+            self.tasks.clear();
+            self.refresh_tasks();
+            self.should_scroll = true;
+        }
     }
 }

@@ -10,6 +10,15 @@ pub struct Ghost {
     pub last_seen: i64
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub id: String,
+    pub command: String,
+    pub args: String,
+    pub status: String,
+    pub result: Option<String>
+}
+
 #[derive(Serialize)]
 pub struct TaskRequest {
     pub command: String,
@@ -23,6 +32,19 @@ pub async fn fetch_ghosts() -> Result<Vec<Ghost>, String> {
     match client.get(&url).send().await {
         Ok(res) => match res.json::<Vec<Ghost>>().await {
             Ok(ghosts) => Ok(ghosts),
+            Err(_) => Err("failed to parse JSON".to_string())
+        },
+        Err(_) => Err("connection failed".to_string())
+    }
+}
+
+pub async fn fetch_tasks(ghost_id: String) -> Result<Vec<Task>, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/ghosts/{}/tasks", BASE_URL, ghost_id);
+
+    match client.get(&url).send().await {
+        Ok(res) => match res.json::<Vec<Task>>().await {
+            Ok(tasks) => Ok(tasks),
             Err(_) => Err("failed to parse JSON".to_string())
         },
         Err(_) => Err("connection failed".to_string())

@@ -1,7 +1,7 @@
 use crate::app::{App, AppState};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Tabs, Wrap}
+    widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Tabs}
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -20,7 +20,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     match app.current_tab {
         0 => render_dashboard(f, app, chunks[1]),
-        1 => render_builder(f, app, chunks[1]),
+        1 => render_terminal(f, app, chunks[1]),
         _ => {}
     }
 
@@ -32,7 +32,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn render_header(f: &mut Frame, app: &mut App, area: Rect) {
-    let titles = vec![" DASHBOARD ", " TASK BUILDER "];
+    let titles = vec![" DASHBOARD ", " TERMINAL "];
     let tabs = Tabs::new(titles)
         .block(Block::default()
             .borders(Borders::ALL)
@@ -89,80 +89,97 @@ fn render_dashboard(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(t, area, &mut app.ghost_table_state);
 }
 
-fn render_builder(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50)
+            Constraint::Min(1),
+            Constraint::Length(3)
         ])
         .split(area);
 
-    // reuse dashboard for efficiency
-    // let the user select a target
-    render_dashboard(f, app, chunks[0]);
-
-    // render input as the bottom half
+    
     let selected_ghost_name = if let Some(idx) = app.selected_ghost_index {
-        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("no GHOST selected")
+        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("none")
     } else {
-        "no GHOST selected"
+        "none"
+    };
+    
+    let mut messages: Vec<ListItem> = Vec::new();
+
+    if app.tasks.is_empty() {
+        messages.push(ListItem::new(Line::from(vec![
+            Span::raw("No history available. Type a command to start.")
+        ])));
+    }
+
+    for task in &app.tasks {
+        let cmd_line = Line::from(vec![
+            Span::styled(format!("{}@{}> ", "ghost", selected_ghost_name), Style::default().fg(Color::Green)),
+            Span::styled(format!("{} {}", task.command, task.args), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        ]);
+
+        messages.push(ListItem::new(cmd_line));
+        
+        match task.status.as_str() {
+            "pending" | "sent" => {
+                messages.push(ListItem::new(Line::from(vec![
+                    Span::styled("[PENDING...]", Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC))
+                ])));
+            },
+            _ => {
+                if let Some(output) = &task.result {
+                    for line in output.lines() {
+                        messages.push(ListItem::new(Line::from(vec![
+                            Span::raw(line)
+                        ])));
+                    }
+                }
+            }
+        }
+
+        messages.push(ListItem::new(Line::from("")));
+    }
+
+    if app.should_scroll {
+        if !messages.is_empty() {
+            app.task_list_state.select(Some(messages.len() - 1));
+        }
+        app.should_scroll = false;
+    }
+
+    let history_block = Block::default()
+        .borders(Borders::ALL)
+        .title(format!(" TERMINAL: {} ", selected_ghost_name));
+
+    let history_list = List::new(messages)
+        .block(history_block)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+
+    f.render_stateful_widget(history_list, chunks[0], &mut app.task_list_state);
+
+    let (border_color, title) = if app.state == AppState::Input {
+        (Color::Yellow, " COMMAND INPUT (TYPING) ")
+    } else {
+        (Color::White, " COMMAND INPUT (Press 'i') ")
     };
 
-    // style based on state
-    // input mode will look different to normal mode
-    // overall a good ux practice
-    let (border_color, title, instructions) = if app.state == AppState::Input {
-        (
-            Color::Yellow,
-            " COMMAND INPUT (TYPING) ",
-            vec![
-                Span::raw("press "),
-                Span::styled("esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to cancel "),
-                Span::styled("enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to send task "),
-            ]
-        )
-    } else {
-        (
-            Color::White,
-            " COMMAND PREVIEW ",
-            vec![
-                Span::raw("press "),
-                Span::styled("i", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to enter command mode "),
-            ]
-        )
-    };
-
-    // special char simulating terminal cursor
-    // will be left here if it ends up working fine
     let cursor = if app.state == AppState::Input { "█" } else { "" };
 
-    let text = vec![
-        Line::from(vec![
-            Span::styled("TARGET GHOST: ", Style::default().fg(Color::Cyan)),
-            Span::styled(selected_ghost_name, Style::default().add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(""),
+    let input_text = vec![
         Line::from(vec![
             Span::styled("> ", Style::default().fg(Color::Cyan)),
             Span::styled(format!("{}{}", app.input_buffer, cursor), Style::default().fg(Color::White))
-        ]),
-        Line::from(instructions).style(Style::default().add_modifier(Modifier::DIM))
+        ])
     ];
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(border_color))
-        .title(title);
-
-    let p = Paragraph::new(text)
-        .block(block)
-        .wrap(Wrap { trim: false });
-
-    f.render_widget(p, chunks[1]);
+    let input_paragraph = Paragraph::new(input_text)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(border_color))
+            .title(title));
+        
+    f.render_widget(input_paragraph, chunks[1]);
 }
 
 fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
@@ -191,7 +208,7 @@ fn render_help_popup(f: &mut Frame) {
         Line::from("h: toggle this window"),
         Line::from("q: quit"),
         Line::from(""),
-        Line::from("=== BUILDER MODE ==="),
+        Line::from("=== TERMINAL MODE ==="),
         Line::from("i: enter input mode"),
         Line::from("enter: send command"),
         Line::from("esc: exit input mode"),
