@@ -7,14 +7,17 @@ use tokio::sync::mpsc;
 pub enum AppState {
     Normal,
     Input,
-    Help
+    Help,
+    ActionMenu,
+    ConfirmModal
 }
 
 pub enum NetworkEvent {
     GhostsFetched(Result<Vec<Ghost>, String>),
     TasksFetched(Result<Vec<Task>, String>),
     TaskSent(Result<String, String>),
-    GhostConfigUpdated(Result<String, String>)
+    GhostConfigUpdated(Result<String, String>),
+    GhostKilled(Result<String, String>)
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -56,6 +59,8 @@ pub struct App {
 
     pub should_scroll: bool,
 
+    pub action_menu_index: usize,
+
     pub status_message: String,
     pub network_tx: mpsc::Sender<NetworkEvent>,
     pub network_rx: mpsc::Receiver<NetworkEvent>,
@@ -77,6 +82,7 @@ impl App {
             input_buffer: String::new(),
             config: ConfigFormState::new(),
             should_scroll: false,
+            action_menu_index: 0,
             status_message: "READY press \'h\' for help".to_string(),
             network_tx: tx,
             network_rx: rx,
@@ -149,7 +155,7 @@ impl App {
             }
         }
     }
-    
+
     pub fn refresh_ghosts(&mut self) {
         let tx = self.network_tx.clone();
         tokio::spawn(async move {
@@ -190,6 +196,23 @@ impl App {
                 self.status_message = "sending task".to_string();
                 self.input_buffer.clear();
                 self.should_scroll = true;
+            }
+        }
+    }
+
+    pub fn kill_current_ghost(&mut self) {
+        if let Some(idx) = self.selected_ghost_index {
+            if let Some(ghost) = self.ghosts.get(idx) {
+                let id = ghost.id.clone();
+                let tx = self.network_tx.clone();
+
+                tokio::spawn(async move {
+                    let res = client::kill_ghost(id).await;
+                    let _ = tx.send(NetworkEvent::GhostKilled(res)).await;
+                });
+
+                self.status_message = "sending kill signal...".to_string();
+                self.state = AppState::Normal;
             }
         }
     }
@@ -237,11 +260,22 @@ impl App {
             NetworkEvent::GhostConfigUpdated(result) => match result {
                 Ok(message) => self.status_message = format!("SUCCESS {}", message),
                 Err(e) => self.status_message = format!("ERROR {}", e)
+            },
+            NetworkEvent::GhostKilled(result) => match result {
+                Ok(message) => self.status_message = format!("SUCCESS {}", message),
+                Err(e) => self.status_message = format!("ERROR {}", e)
             }
         }
     }
 
     pub fn handle_key(&mut self, key: KeyCode) {
+        if self.state == AppState::ActionMenu || self.state == AppState::ConfirmModal {
+            if let KeyCode::Esc = key {
+                self.state = AppState::Normal;
+                return;
+            }
+        }
+
         match key {
             KeyCode::Right => self.next_tab(),
             KeyCode::Left => self.prev_tab(),
@@ -256,15 +290,48 @@ impl App {
     }
 
     pub fn handle_dashboard_keys(&mut self, key: KeyCode) {
-        match key {
-            KeyCode::Down => self.next_ghost(),
-            KeyCode::Up => self.prev_ghost(),
-            KeyCode::Enter => {
-                if self.selected_ghost_index.is_some() {
-                    self.current_tab = 1;
-                    self.refresh_tasks();
-                    self.should_scroll = true;
-                    self.state = AppState::Input;
+        match self.state {
+            AppState::Normal => {
+                match key {
+                    KeyCode::Down => self.next_ghost(),
+                    KeyCode::Up => self.prev_ghost(),
+                    KeyCode::Char('x') => {
+                        if self.selected_ghost_index.is_some() && !self.ghosts.is_empty() {
+                            self.state = AppState::ActionMenu;
+                            self.action_menu_index = 0;
+                        }
+                    },
+                    KeyCode::Enter => {
+                        if self.selected_ghost_index.is_some() {
+                            self.current_tab = 1;
+                            self.refresh_tasks();
+                            self.should_scroll = true;
+                            self.state = AppState::Input;
+                        }
+                    },
+                    _ => {}
+                }
+            },
+            AppState::ActionMenu => {
+                match key {
+                    KeyCode::Up | KeyCode::Down => {
+                        // cycle options if more arise
+                    },
+                    KeyCode::Enter => {
+                        self.state = AppState::ConfirmModal;
+                    },
+                    _ => {}
+                }
+            },
+            AppState::ConfirmModal => {
+                match key {
+                    KeyCode::Enter => {
+                        match self.action_menu_index {
+                            0 => self.kill_current_ghost(),
+                            _ => {}
+                        }
+                    },
+                    _ => {}
                 }
             },
             _ => {}

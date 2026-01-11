@@ -1,7 +1,7 @@
 use crate::app::{App, AppState, ConfigField};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Tabs}
+    widgets::{Block, Borders, Cell, Clear, List, ListItem, ListState, Paragraph, Row, Table, Tabs}
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -28,9 +28,77 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     render_footer(f, app, chunks[2]);
 
-    if app.state == AppState::Help {
-        render_help_popup(f);
+    match app.state {
+        AppState::Help => render_help_popup(f),
+        AppState::ActionMenu => render_action_menu(f, app),
+        AppState::ConfirmModal => render_confirm_modal(f, app),
+        _ => {}
     }
+}
+
+fn render_action_menu(f: &mut Frame, app: &mut App) {
+    let area = centered_rect(40, 30, f.area());
+    f.render_widget(Clear, area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" GHOST ACTION ")
+        .style(Style::default().bg(Color::DarkGray));
+
+    let items = vec![
+        ListItem::new(" [!] KILL SWITCH ").style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+    ];
+
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(Style::default().bg(Color::Red).fg(Color::White));
+
+    let mut state = ListState::default();
+    state.select(Some(app.action_menu_index));
+
+    f.render_stateful_widget(list, area, &mut state);
+}
+
+fn render_confirm_modal(f: &mut Frame, app: &mut App) {
+    let area = centered_rect(50, 20, f.area());
+    f.render_widget(Clear, area);
+
+    let ghost_name = if let Some(idx) = app.selected_ghost_index {
+        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("unknown")
+    } else {
+        "unknown"
+    };
+
+    let (title, color, prompt_text) = match app.action_menu_index {
+        0 => (
+            " CONFIRM KILL ",
+            Color::Red,
+            vec![
+                Span::raw("Are you sure you want to "),
+                Span::styled("KILL", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(format!(" ghost '{}'?", ghost_name))
+            ]
+        ),
+        _ => (" CONFIRM ", Color::Blue, vec![Span::raw("are you sure?")])
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .style(Style::default().bg(color).fg(Color::White));
+    
+    let text = vec![
+        Line::from(""),
+        Line::from(prompt_text),
+        Line::from(""),
+        Line::from("press [ENTER] to confirm or [ESC] to cancel")
+    ];
+
+    let p = Paragraph::new(text)
+        .block(block)
+        .alignment(Alignment::Center);
+
+    f.render_widget(p, area);
 }
 
 fn render_header(f: &mut Frame, app: &mut App, area: Rect) {
@@ -242,7 +310,7 @@ fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::Green)
     };
 
-    let footer = Paragraph::new(format!("STATUS {} | [q] quit | [←/→] change tabs", app.status_message))
+    let footer = Paragraph::new(format!("STATUS {} | [q] quit | [x] actions | [←/→] change tabs", app.status_message))
         .style(status_style)
         .block(Block::default().borders(Borders::ALL));
     
@@ -257,6 +325,7 @@ fn render_help_popup(f: &mut Frame) {
         Line::from(""),
         Line::from("left/right: switch tabs"),
         Line::from("up/down: select item or field"),
+        Line::from("x: open action menu"),
         Line::from("r: force refresh"),
         Line::from("h: toggle this window"),
         Line::from("q: quit"),

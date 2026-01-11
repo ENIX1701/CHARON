@@ -90,3 +90,19 @@ pub async fn update_ghost_config(ghost_id: String, sleep: i64, jitter: u8) -> Re
         Err(e) => Err(format!("ERROR {}", e))
     }
 }
+
+pub async fn kill_ghost(ghost_id: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/ghosts/{}/kill", BASE_URL, ghost_id);
+
+    match client.post(&url).send().await {
+        Ok(res) => {
+            if res.status().is_success() {
+                Ok("kill signal sent".to_string())
+            } else {
+                Err(format!("ERROR returned status {}", res.status()))
+            }
+        },
+        Err(e) => Err(format!("ERROR {}", e))
+    }
+}

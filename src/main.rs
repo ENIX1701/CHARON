@@ -15,7 +15,7 @@ use std::{io, time::Duration};
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-    
+
     enable_raw_mode()?;
     let mut stderr = io::stderr();
     execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
