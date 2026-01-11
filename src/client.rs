@@ -25,6 +25,12 @@ pub struct TaskRequest {
     pub args: String
 }
 
+#[derive(Serialize)]
+pub struct GhostConfigUpdate {
+    pub sleep_interval: i64,
+    pub jitter_percent: u8
+}
+
 pub async fn fetch_ghosts() -> Result<Vec<Ghost>, String> {
     let client = reqwest::Client::new();
     let url = format!("{}/ghosts", BASE_URL);
@@ -66,4 +72,21 @@ pub async fn send_task(ghost_id: String, command: String, args: String) -> Resul
         },
         Err(e) => Err(format!("ERROR {}", e))
     }
-} 
+}
+
+pub async fn update_ghost_config(ghost_id: String, sleep: i64, jitter: u8) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/ghosts/{}/config", BASE_URL, ghost_id);
+    let body = GhostConfigUpdate { sleep_interval: sleep, jitter_percent: jitter };
+
+    match client.post(&url).json(&body).send().await {
+        Ok(res) => {
+            if res.status().is_success() {
+                Ok("ghost config updated".to_string())
+            } else {
+                Err(format!("ERROR returned status {}", res.status()))
+            }
+        },
+        Err(e) => Err(format!("ERROR {}", e))
+    }
+}

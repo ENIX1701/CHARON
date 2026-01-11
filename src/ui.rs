@@ -1,4 +1,4 @@
-use crate::app::{App, AppState};
+use crate::app::{App, AppState, ConfigField};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Tabs}
@@ -21,6 +21,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     match app.current_tab {
         0 => render_dashboard(f, app, chunks[1]),
         1 => render_terminal(f, app, chunks[1]),
+        2 => render_config(f, app, chunks[1]),
+        // 3 => render_builder(f, app, chunks[1]),
         _ => {}
     }
 
@@ -32,7 +34,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn render_header(f: &mut Frame, app: &mut App, area: Rect) {
-    let titles = vec![" DASHBOARD ", " TERMINAL "];
+    let titles = vec![" DASHBOARD ", " TERMINAL ", " CONFIG ", " BUILDER "];
     let tabs = Tabs::new(titles)
         .block(Block::default()
             .borders(Borders::ALL)
@@ -55,7 +57,7 @@ fn render_dashboard(f: &mut Frame, app: &mut App, area: Rect) {
     let rows = app.ghosts.iter().map(|item| {
         let now = chrono::Utc::now().timestamp();
         let diff = now - item.last_seen;
-        let (status, color) = if diff < 30 {
+        let (status, color) = if diff < 30 {    // make this configurable with GHOST beaconing rate * 3
             ("ACTIVE", Color::Green)
         } else {
             ("DEAD", Color::Red)
@@ -98,7 +100,6 @@ fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
         ])
         .split(area);
 
-    
     let selected_ghost_name = if let Some(idx) = app.selected_ghost_index {
         app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("none")
     } else {
@@ -182,6 +183,58 @@ fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(input_paragraph, chunks[1]);
 }
 
+fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),  // info
+            Constraint::Length(3),  // sleep
+            Constraint::Length(3),  // jitter
+            Constraint::Length(1),  // submit
+            Constraint::Min(1)
+        ])
+        .margin(1)
+        .split(area);
+
+    let block = Block::default().borders(Borders::ALL).title(" GHOST CONFIGURATION ");
+    f.render_widget(block, area);
+
+    // ghost info
+
+    // sleep panel
+    let sleep_active = app.config.selection == ConfigField::Sleep;
+    let sleep_style = if sleep_active { Style::default().fg(Color::Yellow) } else { Style::default() };
+
+    let sleep_text = format!("Sleep interval (sec): {}", app.config.sleep_input);
+    let sleep_p = Paragraph::new(sleep_text)
+        .block(Block::default().borders(Borders::ALL).border_style(sleep_style))
+        .style(if sleep_active { Style::default().add_modifier(Modifier::BOLD) } else { Style::default() });
+    f.render_widget(sleep_p, chunks[1]);
+
+    // jitter panel
+    let jitter_active = app.config.selection == ConfigField::Jitter;
+    let jitter_style = if jitter_active { Style::default().fg(Color::Yellow) } else { Style::default() };
+
+    let jitter_text = format!("Sleep interval (sec): {}", app.config.jitter_input);
+    let jitter_p = Paragraph::new(jitter_text)
+        .block(Block::default().borders(Borders::ALL).border_style(jitter_style))
+        .style(if jitter_active { Style::default().add_modifier(Modifier::BOLD) } else { Style::default() });
+    f.render_widget(jitter_p, chunks[2]);
+
+    let btn_active = app.config.selection == ConfigField::Submit;
+    let btn_style = if btn_active {
+        Style::default().bg(Color::Blue).fg(Color::White).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().bg(Color::DarkGray).fg(Color::Gray)
+    };
+
+    let btn_p = Paragraph::new("[ UPDATE CONFIGURATION ]")
+        .alignment(Alignment::Center)
+        .style(btn_style)
+        .block(Block::default().borders(Borders::NONE));
+    f.render_widget(btn_p, chunks[3]);
+}
+
 fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
     let status_style = if app.status_message.contains("ERROR") {
         Style::default().fg(Color::Red)
@@ -189,7 +242,7 @@ fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::Green)
     };
 
-    let footer = Paragraph::new(format!("STATUS {} | [q] quit | [tab] view", app.status_message))
+    let footer = Paragraph::new(format!("STATUS {} | [q] quit | [←/→] change tabs", app.status_message))
         .style(status_style)
         .block(Block::default().borders(Borders::ALL));
     
@@ -202,8 +255,8 @@ fn render_help_popup(f: &mut Frame) {
     let text = vec![
         Line::from("=== NAVIGATION ==="),
         Line::from(""),
-        Line::from("tab: switch tabs (dashboard <-> builder)"),
-        Line::from("up/down: select GHOST from list"),
+        Line::from("left/right: switch tabs"),
+        Line::from("up/down: select item or field"),
         Line::from("r: force refresh"),
         Line::from("h: toggle this window"),
         Line::from("q: quit"),

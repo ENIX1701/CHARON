@@ -13,11 +13,35 @@ pub enum AppState {
 pub enum NetworkEvent {
     GhostsFetched(Result<Vec<Ghost>, String>),
     TasksFetched(Result<Vec<Task>, String>),
-    TaskSent(Result<String, String>)
+    TaskSent(Result<String, String>),
+    GhostConfigUpdated(Result<String, String>)
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum ConfigField {
+    Sleep,
+    Jitter,
+    Submit
+}
+
+pub struct ConfigFormState {
+    pub selection: ConfigField,
+    pub sleep_input: String,
+    pub jitter_input: String
+}
+
+impl ConfigFormState {
+    fn new() -> Self {
+        Self {
+            selection: ConfigField::Sleep,
+            sleep_input: String::new(),
+            jitter_input: String::new()
+        }
+    }
 }
 
 pub struct App {
-    pub current_tab: usize,
+    pub current_tab: usize, // 0 -> dashboard, 1 -> terminal, 2 -> config
     pub state: AppState,
 
     pub ghosts: Vec<Ghost>,
@@ -27,6 +51,8 @@ pub struct App {
     pub tasks: Vec<Task>,
     pub task_list_state: ListState,
     pub input_buffer: String,
+
+    pub config: ConfigFormState,
 
     pub should_scroll: bool,
 
@@ -45,10 +71,11 @@ impl App {
             state: AppState::Normal,
             ghosts: vec![],
             ghost_table_state: TableState::default(),
-            selected_ghost_index: None,
+            selected_ghost_index: Some(0),
             tasks: vec![],
             task_list_state: ListState::default(),
             input_buffer: String::new(),
+            config: ConfigFormState::new(),
             should_scroll: false,
             status_message: "READY press \'h\' for help".to_string(),
             network_tx: tx,
@@ -61,12 +88,27 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
-        self.current_tab = (self.current_tab + 1) % 2;
+        self.current_tab = (self.current_tab + 1) % 4;
+        self.handle_tab_change();
+    }
 
+    pub fn prev_tab(&mut self) {
+        if self.current_tab > 0 {
+            self.current_tab -= 1;
+        } else {
+            self.current_tab = 3;
+        }
+
+        self.handle_tab_change();
+    }
+
+    fn handle_tab_change(&mut self) {
         if self.current_tab == 1 {
             self.refresh_tasks();
             self.should_scroll = true;
         }
+
+        self.state = AppState::Normal;
     }
 
     pub fn toggle_help(&mut self) {
@@ -87,6 +129,24 @@ impl App {
 
         if self.current_tab == 1 && self.tick_count % 10 == 0 {
             self.refresh_tasks();
+        }
+    }
+
+    pub fn submit_config(&mut self) {
+        if let Some(idx) = self.selected_ghost_index {
+            if let Some(ghost) = self.ghosts.get(idx) {
+                let id = ghost.id.clone();
+                let sleep = self.config.sleep_input.parse::<i64>().unwrap_or(60);
+                let jitter = self.config.jitter_input.parse::<u8>().unwrap_or(10);
+
+                let tx = self.network_tx.clone();
+                tokio::spawn(async move {
+                    let res = client::update_ghost_config(id, sleep, jitter).await;
+                    let _ = tx.send(NetworkEvent::GhostConfigUpdated(res)).await;
+                });
+
+                self.status_message = "sending config update...".to_string();
+            }
         }
     }
     
@@ -173,15 +233,33 @@ impl App {
                     self.should_scroll = true;
                 },
                 Err(e) => self.status_message = format!("ERROR {}", e)
+            },
+            NetworkEvent::GhostConfigUpdated(result) => match result {
+                Ok(message) => self.status_message = format!("SUCCESS {}", message),
+                Err(e) => self.status_message = format!("ERROR {}", e)
             }
         }
     }
 
     pub fn handle_key(&mut self, key: KeyCode) {
         match key {
+            KeyCode::Right => self.next_tab(),
+            KeyCode::Left => self.prev_tab(),
+            _ => match self.current_tab {
+                0 => self.handle_dashboard_keys(key),
+                1 => self.handle_terminal_keys(key),
+                2 => self.handle_config_keys(key),
+                // 3 => self.handle_builder_keys(key),
+                _ => {}
+            }
+        }
+    }
+
+    pub fn handle_dashboard_keys(&mut self, key: KeyCode) {
+        match key {
             KeyCode::Down => self.next_ghost(),
             KeyCode::Up => self.prev_ghost(),
-            KeyCode::Enter if self.current_tab == 0 => {
+            KeyCode::Enter => {
                 if self.selected_ghost_index.is_some() {
                     self.current_tab = 1;
                     self.refresh_tasks();
@@ -189,8 +267,61 @@ impl App {
                     self.state = AppState::Input;
                 }
             },
-            KeyCode::Char('i') if self.current_tab == 1 => {
+            _ => {}
+        }
+    }
+
+    pub fn handle_terminal_keys(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Down => self.next_ghost(),
+            KeyCode::Up => self.prev_ghost(),
+            KeyCode::Char('i') => {
                 self.state = AppState::Input;
+            },
+            _ => {}
+        }
+    }
+
+    pub fn handle_config_keys(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Down | KeyCode::Tab => {
+                self.config.selection = match self.config.selection {
+                    ConfigField::Sleep => ConfigField::Jitter,
+                    ConfigField::Jitter => ConfigField::Submit,
+                    ConfigField::Submit => ConfigField::Sleep,
+                }
+            },
+            KeyCode::Up => {
+                self.config.selection = match self.config.selection {
+                    ConfigField::Sleep => ConfigField::Submit,
+                    ConfigField::Jitter => ConfigField::Sleep,
+                    ConfigField::Submit => ConfigField::Jitter,
+                }
+            },
+            KeyCode::Char(c) => {
+                match self.config.selection {
+                    ConfigField::Sleep => if c.is_numeric() { self.config.sleep_input.push(c); },
+                    ConfigField::Jitter => if c.is_numeric() { self.config.jitter_input.push(c); },
+                    _ => {}
+                }
+            },
+            KeyCode::Backspace => {
+                match self.config.selection {
+                    ConfigField::Sleep => { self.config.sleep_input.pop(); },
+                    ConfigField::Jitter => { self.config.jitter_input.pop(); },
+                    _ => {}
+                }
+            },
+            KeyCode::Enter => {
+                if self.config.selection == ConfigField::Submit {
+                    self.submit_config();
+                } else {
+                    // enter acts like tab if not on submit button
+                    self.config.selection = match self.config.selection {
+                        ConfigField::Sleep => ConfigField::Jitter,
+                        _ => ConfigField::Submit
+                    }
+                }
             },
             _ => {}
         }

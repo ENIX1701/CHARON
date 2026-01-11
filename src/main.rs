@@ -40,7 +40,6 @@ async fn main() -> Result<()> {
                         KeyCode::Char('q') => break,
                         KeyCode::Char('h') => app.toggle_help(),
                         KeyCode::Char('r') => app.refresh_ghosts(),
-                        KeyCode::Tab => app.next_tab(),
                         _ => app.handle_key(key.code)
                     }
                 }
