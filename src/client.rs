@@ -76,7 +76,7 @@ pub async fn send_task(ghost_id: String, command: String, args: String) -> Resul
 
 pub async fn update_ghost_config(ghost_id: String, sleep: i64, jitter: u8) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = format!("{}/ghosts/{}/config", BASE_URL, ghost_id);
+    let url = format!("{}/ghosts/{}", BASE_URL, ghost_id);
     let body = GhostConfigUpdate { sleep_interval: sleep, jitter_percent: jitter };
 
     match client.post(&url).json(&body).send().await {
