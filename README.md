@@ -36,6 +36,10 @@ cargo run
 - [x] design a better structure, as cramming everything into a single file will quickly become highly unmaintainable (I think xD)
 - [ ] [EXTRA] add a help section with guide on how to use the currently active window
 - [ ] ship the readme from current work in progress to a polished, user friendly one (will probably also keep the TODO thing, but it a separate README, or in a roadmap type section [or track them on the kanban, also a cool option!!])
+- [ ] when GHOST exceeds it's death timer by 10x (or some other magic number), remove from list
+- [ ] if GHOST comes back alive, show special symbol (or smth) in STATUS column to differentiate from normally alive GHOSTs
+- [ ] add directory navigation to the terminal panel (check if GHOSTs can even do that? I don't think paths are cached rn, so each command defaults to `~`; think if this "feature" is needed for the operator)
+- [ ] GHOST remove functionality to dashboard (`x` menu action)
 
 ## Legal
 
