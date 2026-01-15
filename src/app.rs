@@ -181,12 +181,26 @@ impl App {
         if let Some(idx) = self.selected_ghost_index {
             if let Some(ghost) = self.ghosts.get(idx) {
                 let id = ghost.id.clone();
-                let full_command = self.input_buffer.clone();
+                let full_command = self.input_buffer.trim().to_string();
+
+                if full_command.is_empty() {
+                    return;
+                }
+
                 let tx = self.network_tx.clone();
 
                 let parts: Vec<&str> = full_command.splitn(2, ' ').collect();
-                let command = parts[0].to_string();
-                let args = if parts.len() > 1 { parts[1].to_string() } else { "".to_string() };
+                let first_token = parts[0];
+
+                let (command, args) = match first_token {
+                    "EXEC" | "STOP_HAUNT" | "IMPACT" => {
+                        let arg_str = if parts.len() > 1 { parts[1].to_string() } else { String::new() };
+                        (first_token.to_string(), arg_str)
+                    },
+                    _ => {
+                        ("EXEC".to_string(), full_command)
+                    }
+                };
 
                 tokio::spawn(async move {
                     let res = client::send_task(id, command, args).await;
