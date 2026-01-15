@@ -283,7 +283,7 @@ fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
     let jitter_active = app.config.selection == ConfigField::Jitter;
     let jitter_style = if jitter_active { Style::default().fg(Color::Yellow) } else { Style::default() };
 
-    let jitter_text = format!("Sleep interval (sec): {}", app.config.jitter_input);
+    let jitter_text = format!("Jitter (%): {}", app.config.jitter_input);
     let jitter_p = Paragraph::new(jitter_text)
         .block(Block::default().borders(Borders::ALL).border_style(jitter_style))
         .style(if jitter_active { Style::default().add_modifier(Modifier::BOLD) } else { Style::default() });
