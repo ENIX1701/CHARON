@@ -1,46 +1,60 @@
+<img src="charon-ascii.png" alt="CHARON" style="width: 100%;">
+
 # CHARON
 
-CHARON is the terminal user interface for managing SHADOW.
+Terminal interface for [SHADOW](https://github.com/ENIX1701/SHADOW) written in Rust
 
-## Overview
-**Role:** terminal user interface  
-**Platforms:** Linux  
-**Idea:** Makes it possible to manage SHADOW 
+// GIF
 
-## Capabilities:
-- Customize, generate (possibly in the future...) and deploy implants
-- Manage SHADOW
+## Prerequisites
 
-## How to run
 
-### Development use
 
-Run the app by executing:
+## Run locally
+
 ```bash
+# clone the project and navigate to the directory
+git clone https://github.com/ENIX1701/CHARON
+cd CHARON
+
+# install dependencies and run via Cargo
 cargo run
 ```
 
-### Production use
+## Deploy
 
-> TODO
+CHARON is built with native Docker support in mind. A lightweight, multi-stage `Dockerfile` is included to ensure the experience is as smooth as possible
 
-## TODO
+```bash
+# build the image
+docker build -t charon .
 
-- [x] how should SHADOW be deployed to enable this sort of orchestration? docker, service, etc? -> a multi-stage Docker file (first build, then lightweight runtime)
-- [x] create a moodboard of designs (preferably ASCII art, it's really pretty)
-- [x] basic menu panel
-- [x] SHADOW integration
-- [x] live implant panel (live/dead GHOSTs)
-- [ ] [EXTRA] builder for GHOST payloads -> improve this to compile GHOSTs and expose them on the `/file` endpoint of SHADOW
-- [ ] [EXTRA] local cache (preferably a database; would be nice if it also cached requests)
-- [x] design a better structure, as cramming everything into a single file will quickly become highly unmaintainable (I think xD)
-- [ ] [EXTRA] add a help section with guide on how to use the currently active window
-- [ ] ship the readme from current work in progress to a polished, user friendly one (will probably also keep the TODO thing, but it a separate README, or in a roadmap type section [or track them on the kanban, also a cool option!!])
-- [ ] when GHOST exceeds it's death timer by 10x (or some other magic number), remove from list
-- [ ] if GHOST comes back alive, show special symbol (or smth) in STATUS column to differentiate from normally alive GHOSTs
-- [ ] add directory navigation to the terminal panel (check if GHOSTs can even do that? I don't think paths are cached rn, so each command defaults to `~`; think if this "feature" is needed for the operator)
-- [ ] GHOST remove functionality to dashboard (`x` menu action)
+# run the container
+docker run -it -e SHADOW_URL="127.0.0.1" charon
+```
+
+## Environment variables
+
+| Name              | Type   | Default          | Description                           |
+|-------------------|--------|------------------|---------------------------------------|
+|`SHADOW_URL`       |`String`|`127.0.0.1`       | IP or URL of the SHADOW C2 server     |
+|`SHADOW_PORT`      |`String`|`9999`            | Port the SHADOW API is listening on   |
+|`SHADOW_API_PATH`  |`String`|`/api/v1/charon`  | Base path for the SHADOW API          |
+
+## Usage
+
+Please navigate to the [user manual](docs/MANUAL.md) section of the documentation for usage reference
+
+## Roadmap
+
+- [ ] GHOST payload builder
+- [ ] Local cache
+- [ ] Improved GHOST state management (automatic inactive or manual cleanup)
 
 ## Legal
 
 > **Disclaimer:** This software is for educational purposes and authorized red team engagements only. The authors are not responsible for misuse.
+
+---
+
+Special thanks to [readme.so](https://readme.so/) for helping me make this README coherent at all :3
