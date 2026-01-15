@@ -143,7 +143,7 @@ impl App {
             if let Some(ghost) = self.ghosts.get(idx) {
                 let id = ghost.id.clone();
                 let sleep = self.config.sleep_input.parse::<i64>().unwrap_or(60);
-                let jitter = self.config.jitter_input.parse::<u8>().unwrap_or(10);
+                let jitter = self.config.jitter_input.parse::<i16>().unwrap_or(10);
 
                 let tx = self.network_tx.clone();
                 tokio::spawn(async move {
