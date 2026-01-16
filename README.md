@@ -2,13 +2,18 @@
 
 # CHARON
 
-Terminal interface for [SHADOW](https://github.com/ENIX1701/SHADOW) written in Rust
+Terminal user interface for [SHADOW](https://github.com/ENIX1701/SHADOW) written in Rust.
 
 // GIF
 
 ## Prerequisites
 
+- `Rust` (2024) with `Cargo`
+- `Perl`, `Make` and either `gcc`, `clang` or `musl-dev` to build vendored `openssl`
 
+or  
+
+- `Docker` if you want to go the easy route :3
 
 ## Run locally
 
@@ -23,13 +28,13 @@ cargo run
 
 ## Deploy
 
-CHARON is built with native Docker support in mind. A lightweight, multi-stage `Dockerfile` is included to ensure the experience is as smooth as possible
+CHARON is built with native Docker support in mind. A lightweight, multi-stage `Dockerfile` is included to ensure the experience is as smooth as possible.
 
 ```bash
 # build the image
 docker build -t charon .
 
-# run the container
+# run the container in interactive tty mode
 docker run -it -e SHADOW_URL="127.0.0.1" charon
 ```
 
@@ -43,7 +48,7 @@ docker run -it -e SHADOW_URL="127.0.0.1" charon
 
 ## Usage
 
-Please navigate to the [user manual](docs/MANUAL.md) section of the documentation for usage reference
+Please navigate to the [user manual](docs/MANUAL.md) section of the documentation for usage reference.
 
 ## Roadmap
 
@@ -57,4 +62,4 @@ Please navigate to the [user manual](docs/MANUAL.md) section of the documentatio
 
 ---
 
-Special thanks to [readme.so](https://readme.so/) for helping me make this README coherent at all :3
+Special thanks to [awesome-readme](https://github.com/matiassingers/awesome-readme) for README ideas and to [readme.so](https://readme.so/) for helping me make this one coherent at all :3
