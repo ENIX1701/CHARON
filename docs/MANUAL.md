@@ -42,7 +42,7 @@ The types of commands you can run are:
 |`EXEC` (default)|`<command to run>`| Executes command provided on GHOSTs system |
 |`IMPACT`|`-`| Executes the configured IMPACT module of a GHOST (parametrizable in compilation) |
 
-> [!INFO]
+> [!NOTE]
 > If no explicit command is provided (so you input `whoami` into the terminal, for example), CHARON defaults to `EXEC`, so you can easily ommit that part
 
 #### Navigation
