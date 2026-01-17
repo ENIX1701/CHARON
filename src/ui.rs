@@ -1,4 +1,4 @@
-use crate::app::{App, AppState, ConfigField};
+use crate::app::{App, AppState, ConfigField, BuilderField};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Clear, List, ListItem, ListState, Paragraph, Row, Table, Tabs}
@@ -22,7 +22,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         0 => render_dashboard(f, app, chunks[1]),
         1 => render_terminal(f, app, chunks[1]),
         2 => render_config(f, app, chunks[1]),
-        // 3 => render_builder(f, app, chunks[1]),
+        3 => render_builder(f, app, chunks[1]),
         _ => {}
     }
 
@@ -303,6 +303,92 @@ fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_p, chunks[3]);
 }
 
+fn render_builder(f: &mut Frame, app: &mut App, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),  // url/port
+            Constraint::Length(7),  // toggles
+            Constraint::Length(1),  // submit
+            Constraint::Min(1)      // status
+        ])
+        .margin(1)
+        .split(area);
+
+    let block = Block::default().borders(Borders::ALL).title(" GHOST PAYLOAD BUILDER ");
+    f.render_widget(block, area);
+
+    let net_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+        .split(chunks[0]);
+    
+    let url_active = app.builder.selection == BuilderField::Url;
+    let url_style = if url_active { Style::default().fg(Color::Yellow) } else { Style::default() };
+    let url_p = Paragraph::new(format!("SHADOW URL: {}", app.builder.target_url))
+        .block(Block::default().borders(Borders::ALL).border_style(url_style));
+    f.render_widget(url_p, net_chunks[0]);
+    
+    let port_active = app.builder.selection == BuilderField::Port;
+    let port_style = if port_active { Style::default().fg(Color::Yellow) } else { Style::default() };
+    let port_p = Paragraph::new(format!("PORT: {}", app.builder.target_port))
+        .block(Block::default().borders(Borders::ALL).border_style(port_style));
+    f.render_widget(port_p, net_chunks[1]);
+
+    let toggle_block = Block::default().borders(Borders::ALL).title(" Modules ");
+    f.render_widget(toggle_block, chunks[1]);
+
+    let toggle_area = chunks[1].inner(Margin { vertical: 1, horizontal: 1 });
+    let toggles = vec![
+        ("Debug mode", app.builder.enable_debug, BuilderField::EnableDebug),
+        ("Persistence", app.builder.enable_persistence, BuilderField::EnablePersistence),
+        ("Impact", app.builder.enable_impact, BuilderField::EnableImpact),
+        ("Exfiltration", app.builder.enable_exfil, BuilderField::EnableExfil)
+    ];
+
+    let list_items: Vec<ListItem> = toggles.iter().map(|(label, enabled, field)| {
+        let status = if *enabled { "[x]" } else { "[ ]" };
+        let content = format!("{} {}", status, label);
+        let style = if app.builder.selection == *field {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        ListItem::new(content).style(style)
+    }).collect();
+
+    let list = List::new(list_items);
+    f.render_widget(list, toggle_area);
+
+    let btn_active = app.builder.selection == BuilderField::Submit;
+    let btn_style = if btn_active {
+        Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().bg(Color::DarkGray).fg(Color::Gray)
+    };
+
+    let btn_p = Paragraph::new("[ COMPILE PAYLOAD ]")
+        .alignment(Alignment::Center)
+        .style(btn_style)
+        .block(Block::default().borders(Borders::NONE));
+    f.render_widget(btn_p, chunks[2]);
+
+    let status_color = if app.builder.build_status.contains("ERROR") { Color::Red }
+                        else if app.builder.build_status.contains("SUCCESS") { Color::Green }
+                        else { Color::Cyan };
+
+    let output_block = Block::default()
+        .borders(Borders::TOP)
+        .title(" BUILD OUTPUT ");
+
+    let output_text = Paragraph::new(app.builder.build_status.clone())
+        .block(output_block)
+        .style(Style::default().fg(status_color));
+
+    f.render_widget(output_text, chunks[3]);
+}
+
 fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
     let status_style = if app.status_message.contains("ERROR") {
         Style::default().fg(Color::Red)
@@ -331,9 +417,11 @@ fn render_help_popup(f: &mut Frame) {
         Line::from("q: quit"),
         Line::from(""),
         Line::from("=== TERMINAL MODE ==="),
+        Line::from(""),
         Line::from("i: enter input mode"),
         Line::from("enter: send command"),
         Line::from("esc: exit input mode"),
+        Line::from(""),
     ];
     let p = Paragraph::new(text).block(block).style(Style::default().bg(Color::DarkGray));
 
