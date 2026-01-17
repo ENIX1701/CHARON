@@ -68,8 +68,27 @@ This tab is used to send configuration changes to the CHOST currently selected o
 
 ### Builder
 
-> [!IMPORTANT]
-> Still in progress
+// PIC
+
+This tab allows the creation of custom GHOSTs. 
+
+#### SHADOW configuration
+
+`SHADOW_URL` - IP or URL of the SHADOW C2 server
+`PORT` - port of the aforementioned server
+
+#### Modules
+
+|Name|Functionality|
+|-|-|
+|`Debug mode`|Verbose [logging](https://github.com/ENIX1701/GHOST/docs/CODE_GUIDELINES.md#terminal-output) on GHOSTs|
+|`Persistence`|Multiple [persistence](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#persistence) mechanisms|
+|`Impact`|Enables the [`IMPACT`](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#impact) command and functionality|
+|`Exfiltration`|Enables different [exfiltration](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#exfiltration) options|
+
+#### Resulting binary
+
+Once configured, select `[ COMPILE PAYLOAD ]` to build the binary. It will be placed in GHOST's build directory (`GHOST/build/bin/Ghost` relative to AETHER).
 
 ## Status indicators
 
