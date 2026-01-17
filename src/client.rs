@@ -10,10 +10,16 @@ pub fn get_base_url() -> String {
         api_path = format!("/{}", api_path);
     }
 
-    if !port.is_empty() {
+    let base = if !port.is_empty() {
         format!("{}:{}{}", url, port, api_path)
     } else {
         format!("{}{}", url, api_path)
+    };
+
+    if !base.starts_with("http") {
+        format!("http://{}", base)
+    } else {
+        base
     }
 }
 

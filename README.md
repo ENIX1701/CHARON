@@ -59,7 +59,8 @@ Please navigate to the [user manual](docs/MANUAL.md) section of the documentatio
 
 ## Legal
 
-> **Disclaimer:** This software is for educational purposes and authorized red team engagements only. The authors are not responsible for misuse.
+> [!IMPORTANT]
+> This software is for educational purposes and authorized red team engagements only. The authors are not responsible for misuse.
 
 ---
 

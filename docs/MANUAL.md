@@ -79,12 +79,12 @@ This tab allows the creation of custom GHOSTs.
 
 #### Modules
 
-|Name|Functionality|
-|-|-|
-|`Debug mode`|Verbose [logging](https://github.com/ENIX1701/GHOST/docs/CODE_GUIDELINES.md#terminal-output) on GHOSTs|
-|`Persistence`|Multiple [persistence](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#persistence) mechanisms|
-|`Impact`|Enables the [`IMPACT`](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#impact) command and functionality|
-|`Exfiltration`|Enables different [exfiltration](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#exfiltration) options|
+| Name              | Functionality                                                                                                     |
+|-------------------|-------------------------------------------------------------------------------------------------------------------|
+| `Debug mode`      | Verbose [logging](https://github.com/ENIX1701/GHOST/docs/CODE_GUIDELINES.md#terminal-output) on GHOSTs            |
+| `Persistence`     | Multiple [persistence](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#persistence) mechanisms            |
+| `Impact`          | Enables the [`IMPACT`](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#impact) command and functionality  |
+| `Exfiltration`    | Enables different [exfiltration](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#exfiltration) options    |
 
 #### Resulting binary
 
