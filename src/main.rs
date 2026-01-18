@@ -1,51 +1,106 @@
-mod app;
+mod action;
 mod client;
+mod models;
+mod state;
 mod ui;
+mod update;
 
-use app::{App, AppState};
-use color_eyre::Result;
+use crate::action::Action;
+use crate::client::{C2Client, RealClient};
+use crate::state::AppState;
+use crate::update::Command;
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{io, time::Duration};
+use std::io;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    color_eyre::install()?;
-
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
-    let mut stderr = io::stderr();
-    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stderr);
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
+    let c2_client: Arc<dyn C2Client> = Arc::new(RealClient::new());
+    let mut app_state = AppState::default();
+
+    let (action_tx, mut action_rx) = mpsc::channel(100);
+
+    let _ = action_tx.send(Action::Tick).await;
+    let init_tx = action_tx.clone();
+    let init_client = c2_client.clone();
+
+    tokio::spawn(async move {
+        let res = init_client.fetch_ghosts().await;
+        let _ = init_tx.send(Action::ReceiveGhosts(res)).await;
+    });
+
+    let tick_rate = Duration::from_millis(250);
+    let mut last_tick = Instant::now();
 
     loop {
-        terminal.draw(|f| ui::draw(f, &mut app))?;
+        terminal.draw(|f| ui::draw(f, &app_state))?;
 
-        if let Ok(message) = app.network_rx.try_recv() {
-            app.handle_network_message(message);
+        let mut should_process_action = None;
+
+        if crossterm::event::poll(Duration::from_millis(10))? {
+            if let Event::Key(key) = event::read()? {
+                let action = match key.code {
+                    KeyCode::Char(c) => Some(Action::Char(c)),
+                    KeyCode::Enter => Some(Action::Enter),
+                    KeyCode::Esc => Some(Action::Esc),
+                    KeyCode::Backspace => Some(Action::Backspace),
+                    KeyCode::Up => Some(Action::Up),
+                    KeyCode::Down => Some(Action::Down),
+                    KeyCode::Left => Some(Action::Left),
+                    KeyCode::Right => Some(Action::Right),
+                    KeyCode::Tab => Some(Action::NextTab),
+                    KeyCode::BackTab => Some(Action::PrevTab),
+                    _ => None
+                };
+
+                if let Some(a) = action {
+                    should_process_action = Some(a);
+                }
+            }
         }
 
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if app.state == AppState::Input {
-                    app.handle_input_mode(key);
-                } else {
-                    match key.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('h') => app.toggle_help(),
-                        KeyCode::Char('r') => app.refresh_ghosts(),
-                        _ => app.handle_key(key.code)
+        if let Ok(action) = action_rx.try_recv() {
+            should_process_action = Some(action);
+        }
+
+        if last_tick.elapsed() >= tick_rate {
+            if should_process_action.is_none() {
+                should_process_action = Some(Action::Tick);
+            }
+
+            last_tick = Instant::now();
+        }
+
+        if let Some(action) = should_process_action {
+            let command = update::update(&mut app_state, action);
+
+            if let Some(cmd) = command {
+                match cmd {
+                    Command::Quit => break,
+                    _ => {
+                        let tx = action_tx.clone();
+                        let c = c2_client.clone();
+
+                        tokio::spawn(async move {
+                            handle_command(cmd, c, tx).await;
+                        });
                     }
                 }
             }
-        } else {
-            app.on_tick()
         }
     }
 
@@ -54,4 +109,33 @@ async fn main() -> Result<()> {
     terminal.show_cursor()?;
 
     Ok(())
+}
+
+async fn handle_command(cmd: Command, client: Arc<dyn C2Client>, tx: mpsc::Sender<Action>) {
+    match cmd {
+        Command::FetchGhosts => {
+            let res = client.fetch_ghosts().await;
+            let _ = tx.send(Action::ReceiveGhosts(res)).await;
+        },
+        Command::FetchTasks(ghost_id) => {
+            let res = client.fetch_tasks(&ghost_id).await;
+            let _ = tx.send(Action::ReceiveTasks(res)).await;
+        },
+        Command::SendTask { ghost_id, req } => {
+            let res = client.send_task(&ghost_id, req).await;
+            let _ = tx.send(Action::ReceiveTaskSendResult(res)).await;
+        },
+        Command::UpdateGhostConfig { ghost_id, config } => {
+            let res = client.update_config(&ghost_id, config).await;
+            let _ = tx.send(Action::ReceiveConfigUpdateResult(res)).await;
+        },
+        Command::KillGhost(ghost_id) => {
+            let res = client.kill_ghost(&ghost_id).await;
+            let _ = tx.send(Action::ReceiveKillResult(res)).await;
+        },
+        Command::BuildPayload { .. } => {
+            // TODO
+        },
+        Command::Quit => {}
+    }
 }

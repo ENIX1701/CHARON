@@ -1,10 +1,13 @@
-use crate::app::{App, AppState, ConfigField, BuilderField};
+use crate::models::TaskStatus;
+use crate::state::{AppState, BuilderField, ConfigField, CurrentScreen};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Cell, Clear, List, ListItem, ListState, Paragraph, Row, Table, Tabs}
+    widgets::{
+        Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Tabs
+    }
 };
 
-pub fn draw(f: &mut Frame, app: &mut App) {
+pub fn draw(f: &mut Frame, app: &AppState) {
     // layout
     // header with tabs, main section and footer showing status
     let chunks = Layout::default()
@@ -18,96 +21,38 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     render_header(f, app, chunks[0]);
 
-    match app.current_tab {
-        0 => render_dashboard(f, app, chunks[1]),
-        1 => render_terminal(f, app, chunks[1]),
-        2 => render_config(f, app, chunks[1]),
-        3 => render_builder(f, app, chunks[1]),
-        _ => {}
+    match app.current_screen {
+        CurrentScreen::Dashboard => render_dashboard(f, app, chunks[1]),
+        CurrentScreen::Terminal => render_terminal(f, app, chunks[1]),
+        CurrentScreen::Config => render_config(f, app, chunks[1]),
+        CurrentScreen::Builder => render_builder(f, app, chunks[1])
     }
 
     render_footer(f, app, chunks[2]);
 
-    match app.state {
-        AppState::Help => render_help_popup(f),
-        AppState::ActionMenu => render_action_menu(f, app),
-        AppState::ConfirmModal => render_confirm_modal(f, app),
-        _ => {}
+    if app.show_help {
+        render_help_popup(f);
+    }
+
+    if app.show_action_menu {
+        render_action_menu(f, app);
     }
 }
 
-fn render_action_menu(f: &mut Frame, app: &mut App) {
-    let area = centered_rect(40, 30, f.area());
-    f.render_widget(Clear, area);
-
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" GHOST ACTION ")
-        .style(Style::default().bg(Color::DarkGray));
-
-    let items = vec![
-        ListItem::new(" [!] KILL SWITCH ").style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-    ];
-
-    let list = List::new(items)
-        .block(block)
-        .highlight_style(Style::default().bg(Color::Red).fg(Color::White));
-
-    let mut state = ListState::default();
-    state.select(Some(app.action_menu_index));
-
-    f.render_stateful_widget(list, area, &mut state);
-}
-
-fn render_confirm_modal(f: &mut Frame, app: &mut App) {
-    let area = centered_rect(50, 20, f.area());
-    f.render_widget(Clear, area);
-
-    let ghost_name = if let Some(idx) = app.selected_ghost_index {
-        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("unknown")
-    } else {
-        "unknown"
-    };
-
-    let (title, color, prompt_text) = match app.action_menu_index {
-        0 => (
-            " CONFIRM KILL ",
-            Color::Red,
-            vec![
-                Span::raw("Are you sure you want to "),
-                Span::styled("KILL", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(format!(" ghost '{}'?", ghost_name))
-            ]
-        ),
-        _ => (" CONFIRM ", Color::Blue, vec![Span::raw("are you sure?")])
-    };
-
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(title)
-        .style(Style::default().bg(color).fg(Color::White));
-    
-    let text = vec![
-        Line::from(""),
-        Line::from(prompt_text),
-        Line::from(""),
-        Line::from("press [ENTER] to confirm or [ESC] to cancel")
-    ];
-
-    let p = Paragraph::new(text)
-        .block(block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(p, area);
-}
-
-fn render_header(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_header(f: &mut Frame, app: &AppState, area: Rect) {
     let titles = vec![" DASHBOARD ", " TERMINAL ", " CONFIG ", " BUILDER "];
+    let current_index = match app.current_screen {
+        CurrentScreen::Dashboard => 0,
+        CurrentScreen::Terminal => 1,
+        CurrentScreen::Config => 2,
+        CurrentScreen::Builder => 3
+    };
+
     let tabs = Tabs::new(titles)
         .block(Block::default()
             .borders(Borders::ALL)
             .title(" CHARON "))
-        .select(app.current_tab)
+        .select(current_index)
         .style(Style::default().fg(Color::Cyan))
         .highlight_style(Style::default()
             .add_modifier(Modifier::BOLD)
@@ -116,27 +61,33 @@ fn render_header(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(tabs, area);
 }
 
-fn render_dashboard(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_dashboard(f: &mut Frame, app: &AppState, area: Rect) {
     let header_cells = ["ID", "HOSTNAME", "OS", "LAST SEEN", "STATUS"]
         .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+        .map(|h| {
+            Cell::from(*h).style(
+                Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+            )
+        });
     let header = Row::new(header_cells).height(1).bottom_margin(1);
 
-    let rows = app.ghosts.iter().map(|item| {
+    let rows = app.dashboard.ghosts.iter().map(|ghost| {
         let now = chrono::Utc::now().timestamp();
-        let diff = now - item.last_seen;
-        let (status, color) = if diff < 30 {    // make this configurable with GHOST beaconing rate * 3
+        let diff = now - ghost.last_seen;
+        let (status_str, color) = if diff < 60 {    // make this configurable with GHOST beaconing rate * 3
             ("ACTIVE", Color::Green)
         } else {
-            ("DEAD", Color::Red)
+            ("SILENT", Color::Red)
         };
 
         let cells = vec![
-            Cell::from(item.id.chars().take(8).collect::<String>() + "..."),
-            Cell::from(item.hostname.clone()),
-            Cell::from(item.os.clone()),
+            Cell::from(ghost.id.chars().take(8).collect::<String>() + "..."),
+            Cell::from(ghost.hostname.clone()),
+            Cell::from(ghost.os.clone()),
             Cell::from(format!("{}s ago", diff)),
-            Cell::from(status).style(Style::default().fg(color)),
+            Cell::from(status_str).style(Style::default().fg(color)),
         ];
         Row::new(cells).height(1)
     });
@@ -152,14 +103,23 @@ fn render_dashboard(f: &mut Frame, app: &mut App, area: Rect) {
         ],
     )
     .header(header)
-    .block(Block::default().borders(Borders::ALL).title(" ROAMING GHOSTs "))
-    .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow))
+    .block(
+        Block::default()
+        .borders(Borders::ALL)
+        .title(" ROAMING GHOSTs ")
+    )
+    .row_highlight_style(
+        Style::default()
+        .add_modifier(Modifier::REVERSED)
+        .fg(Color::Yellow)
+    )
     .highlight_symbol(">> ");
 
-    f.render_stateful_widget(t, area, &mut app.ghost_table_state);
+    let mut state = app.dashboard.table_state.clone();
+    f.render_stateful_widget(t, area, &mut state);
 }
 
-fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -167,38 +127,32 @@ fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(3)
         ])
         .split(area);
-
-    let selected_ghost_name = if let Some(idx) = app.selected_ghost_index {
-        app.ghosts.get(idx).map(|g| g.hostname.as_str()).unwrap_or("none")
-    } else {
-        "none"
-    };
     
     let mut messages: Vec<ListItem> = Vec::new();
+    let ghost_name = app.terminal.active_ghost_id.as_deref().unwrap_or("none");
 
-    if app.tasks.is_empty() {
+    if app.terminal.tasks.is_empty() {
         messages.push(ListItem::new(Line::from(vec![
-            Span::raw("No history available. Type a command to start.")
+            Span::raw("No history available. Select a GHOST in the dashboard.")
         ])));
     }
 
-    for task in &app.tasks {
-        let cmd_line = Line::from(vec![
-            Span::styled(format!("{}@{}> ", "ghost", selected_ghost_name), Style::default().fg(Color::Green)),
+    for task in &app.terminal.tasks {
+        let header = Line::from(vec![
+            Span::styled(format!("ghost@{}> ", ghost_name), Style::default().fg(Color::Green)),
             Span::styled(format!("{} {}", task.command, task.args), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]);
-
-        messages.push(ListItem::new(cmd_line));
+        messages.push(ListItem::new(header));
         
-        match task.status.as_str() {
-            "pending" | "sent" => {
+        match task.status {
+            TaskStatus::Pending | TaskStatus::Sent => {
                 messages.push(ListItem::new(Line::from(vec![
                     Span::styled("[PENDING...]", Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC))
                 ])));
             },
             _ => {
-                if let Some(output) = &task.result {
-                    for line in output.lines() {
+                if let Some(result) = &task.result {
+                    for line in result.lines() {
                         messages.push(ListItem::new(Line::from(vec![
                             Span::raw(line)
                         ])));
@@ -210,35 +164,25 @@ fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
         messages.push(ListItem::new(Line::from("")));
     }
 
-    if app.should_scroll {
-        if !messages.is_empty() {
-            app.task_list_state.select(Some(messages.len() - 1));
-        }
-        app.should_scroll = false;
-    }
-
     let history_block = Block::default()
         .borders(Borders::ALL)
-        .title(format!(" TERMINAL: {} ", selected_ghost_name));
+        .title(format!(" TERMINAL: {} ", ghost_name));
 
     let history_list = List::new(messages)
         .block(history_block)
         .highlight_style(Style::default().add_modifier(Modifier::BOLD));
 
-    f.render_stateful_widget(history_list, chunks[0], &mut app.task_list_state);
+    let mut list_state = app.terminal.list_state.clone();
+    f.render_stateful_widget(history_list, chunks[0], &mut list_state);
 
-    let (border_color, title) = if app.state == AppState::Input {
-        (Color::Yellow, " COMMAND INPUT (TYPING) ")
-    } else {
-        (Color::White, " COMMAND INPUT (Press 'i') ")
-    };
+    let (border_color, title) = (Color::Yellow, " COMMAND INPUT (TYPING) ");
 
-    let cursor = if app.state == AppState::Input { "█" } else { "" };
+    let cursor = "█";
 
     let input_text = vec![
         Line::from(vec![
             Span::styled("> ", Style::default().fg(Color::Cyan)),
-            Span::styled(format!("{}{}", app.input_buffer, cursor), Style::default().fg(Color::White))
+            Span::styled(format!("{}{}", app.terminal.input_buffer, cursor), Style::default().fg(Color::White))
         ])
     ];
 
@@ -251,161 +195,167 @@ fn render_terminal(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(input_paragraph, chunks[1]);
 }
 
-fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_config(f: &mut Frame, app: &AppState, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),  // info
             Constraint::Length(3),  // sleep
             Constraint::Length(3),  // jitter
-            Constraint::Length(1),  // submit
+            Constraint::Length(3),  // submit
             Constraint::Min(1)
         ])
         .margin(1)
         .split(area);
 
-    let block = Block::default().borders(Borders::ALL).title(" GHOST CONFIGURATION ");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" GHOST CONFIGURATION ");
     f.render_widget(block, area);
 
-    // ghost info
-
-    // sleep panel
-    let sleep_active = app.config.selection == ConfigField::Sleep;
-    let sleep_style = if sleep_active { Style::default().fg(Color::Yellow) } else { Style::default() };
-
-    let sleep_text = format!("Sleep interval (sec): {}", app.config.sleep_input);
-    let sleep_p = Paragraph::new(sleep_text)
-        .block(Block::default().borders(Borders::ALL).border_style(sleep_style))
-        .style(if sleep_active { Style::default().add_modifier(Modifier::BOLD) } else { Style::default() });
-    f.render_widget(sleep_p, chunks[1]);
-
-    // jitter panel
-    let jitter_active = app.config.selection == ConfigField::Jitter;
-    let jitter_style = if jitter_active { Style::default().fg(Color::Yellow) } else { Style::default() };
-
-    let jitter_text = format!("Jitter (%): {}", app.config.jitter_input);
-    let jitter_p = Paragraph::new(jitter_text)
-        .block(Block::default().borders(Borders::ALL).border_style(jitter_style))
-        .style(if jitter_active { Style::default().add_modifier(Modifier::BOLD) } else { Style::default() });
-    f.render_widget(jitter_p, chunks[2]);
-
-    let btn_active = app.config.selection == ConfigField::Submit;
-    let btn_style = if btn_active {
-        Style::default().bg(Color::Blue).fg(Color::White).add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().bg(Color::DarkGray).fg(Color::Gray)
+    let get_style = |field: ConfigField| {
+        if app.config.selected_field == field {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        }
     };
 
-    let btn_p = Paragraph::new("[ UPDATE CONFIGURATION ]")
+    let sleep_p = Paragraph::new(format!("Sleep interval (s): {}", app.config.sleep_input))
+        .block(Block::default().borders(Borders::ALL).border_style(get_style(ConfigField::Sleep)));
+    f.render_widget(sleep_p, chunks[1]);
+
+    let jitter_p = Paragraph::new(format!("Jitter (%): {}", app.config.jitter_input))
+        .block(Block::default().borders(Borders::ALL).border_style(get_style(ConfigField::Jitter)));
+    f.render_widget(jitter_p, chunks[2]);
+
+    let submit_style = if app.config.selected_field == ConfigField::Submit {
+        Style::default().bg(Color::Blue).fg(Color::White)
+    } else {
+        Style::default().bg(Color::DarkGray)
+    };
+    let submit_p = Paragraph::new("[ UPDATE CONFIGURATION ]")
         .alignment(Alignment::Center)
-        .style(btn_style)
-        .block(Block::default().borders(Borders::NONE));
-    f.render_widget(btn_p, chunks[3]);
+        .block(Block::default().borders(Borders::ALL).style(submit_style));
+    f.render_widget(submit_p, chunks[3]);
 }
 
-fn render_builder(f: &mut Frame, app: &mut App, area: Rect) {
+fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),  // url/port
-            Constraint::Length(7),  // toggles
-            Constraint::Length(1),  // submit
+            Constraint::Length(8),  // toggles
+            Constraint::Length(3),  // submit
             Constraint::Min(1)      // status
         ])
         .margin(1)
         .split(area);
 
-    let block = Block::default().borders(Borders::ALL).title(" GHOST PAYLOAD BUILDER ");
-    f.render_widget(block, area);
+    let main_block = Block::default().borders(Borders::ALL).title(" GHOST PAYLOAD BUILDER ");
+    f.render_widget(main_block, area);
 
     let net_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(chunks[0]);
     
-    let url_active = app.builder.selection == BuilderField::Url;
-    let url_style = if url_active { Style::default().fg(Color::Yellow) } else { Style::default() };
-    let url_p = Paragraph::new(format!("SHADOW URL: {}", app.builder.target_url))
-        .block(Block::default().borders(Borders::ALL).border_style(url_style));
-    f.render_widget(url_p, net_chunks[0]);
-    
-    let port_active = app.builder.selection == BuilderField::Port;
-    let port_style = if port_active { Style::default().fg(Color::Yellow) } else { Style::default() };
-    let port_p = Paragraph::new(format!("PORT: {}", app.builder.target_port))
-        .block(Block::default().borders(Borders::ALL).border_style(port_style));
-    f.render_widget(port_p, net_chunks[1]);
+    let get_style = |field: BuilderField| {
+        if app.builder.selected_field == field {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        }
+    };
 
-    let toggle_block = Block::default().borders(Borders::ALL).title(" Modules ");
-    f.render_widget(toggle_block, chunks[1]);
+    f.render_widget(
+        Paragraph::new(format!("SHADOW URL: {}", app.builder.target_url))
+        .block(Block::default().borders(Borders::ALL).border_style(get_style(BuilderField::Url))),
+        net_chunks[0]
+    );
 
-    let toggle_area = chunks[1].inner(Margin { vertical: 1, horizontal: 1 });
+    f.render_widget(
+        Paragraph::new(format!("PORT: {}", app.builder.target_port))
+        .block(Block::default().borders(Borders::ALL).border_style(get_style(BuilderField::Port))),
+        net_chunks[1]
+    );
+
     let toggles = vec![
         ("Debug mode", app.builder.enable_debug, BuilderField::EnableDebug),
         ("Persistence", app.builder.enable_persistence, BuilderField::EnablePersistence),
         ("Impact", app.builder.enable_impact, BuilderField::EnableImpact),
         ("Exfiltration", app.builder.enable_exfil, BuilderField::EnableExfil)
     ];
+    
+    let items: Vec<ListItem> = toggles
+        .iter()
+        .map(|(label, active, field)| {
+            let check = if *active { "[x]" } else { "[ ]" };
+            let content = format!("{} {}", check, label);
+            let style = if app.builder.selected_field == *field {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
 
-    let list_items: Vec<ListItem> = toggles.iter().map(|(label, enabled, field)| {
-        let status = if *enabled { "[x]" } else { "[ ]" };
-        let content = format!("{} {}", status, label);
-        let style = if app.builder.selection == *field {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
+            ListItem::new(content).style(style)
+        })
+        .collect();
 
-        ListItem::new(content).style(style)
-    }).collect();
+    f.render_widget(
+        List::new(items).block(Block::default().borders(Borders::ALL).title(" Modules ")),
+        chunks[1]
+    );
 
-    let list = List::new(list_items);
-    f.render_widget(list, toggle_area);
-
-    let btn_active = app.builder.selection == BuilderField::Submit;
-    let btn_style = if btn_active {
+    let btn_style = if app.builder.selected_field == BuilderField::Submit {
         Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
     } else {
         Style::default().bg(Color::DarkGray).fg(Color::Gray)
     };
 
-    let btn_p = Paragraph::new("[ COMPILE PAYLOAD ]")
-        .alignment(Alignment::Center)
-        .style(btn_style)
-        .block(Block::default().borders(Borders::NONE));
-    f.render_widget(btn_p, chunks[2]);
+    f.render_widget(
+        Paragraph::new("[ COMPILE PAYLOAD ]")
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL).style(btn_style)),
+        chunks[2]
+    );
 
-    let status_color = if app.builder.build_status.contains("ERROR") { Color::Red }
-                        else if app.builder.build_status.contains("SUCCESS") { Color::Green }
+    let status_color = if app.builder.build_status_msg.contains("ERROR") { Color::Red }
+                        else if app.builder.build_status_msg.contains("SUCCESS") { Color::Green }
                         else { Color::Cyan };
 
-    let output_block = Block::default()
-        .borders(Borders::TOP)
-        .title(" BUILD OUTPUT ");
-
-    let output_text = Paragraph::new(app.builder.build_status.clone())
-        .block(output_block)
-        .style(Style::default().fg(status_color));
-
-    f.render_widget(output_text, chunks[3]);
+    f.render_widget(Paragraph::new(app.builder.build_status_msg.clone())
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .title(" BUILD OUTPUT ")
+        )
+        .style(Style::default().fg(status_color)),
+        chunks[3]
+    );
 }
 
-fn render_footer(f: &mut Frame, app: &mut App, area: Rect) {
-    let status_style = if app.status_message.contains("ERROR") {
+fn render_footer(f: &mut Frame, app: &AppState, area: Rect) {
+    let status_style = if app.status_message.to_lowercase().contains("error") {
         Style::default().fg(Color::Red)
     } else {
         Style::default().fg(Color::Green)
     };
 
-    let footer = Paragraph::new(format!("STATUS {} | [q] quit | [x] actions | [←/→] change tabs", app.status_message))
+    f.render_widget(
+        Paragraph::new(format!(
+            "STATUS {} | [q] quit | [x] actions | [←/→] change tabs", app.status_message
+        ))
         .style(status_style)
-        .block(Block::default().borders(Borders::ALL));
-    
-    f.render_widget(footer, area);
+        .block(Block::default().borders(Borders::ALL)),
+        area
+    );
 }
 
 fn render_help_popup(f: &mut Frame) {
-    let block = Block::default().borders(Borders::ALL).title(" HELP ");
     let area = centered_rect(60, 50, f.area());
+    f.render_widget(Clear, area);
+
     let text = vec![
         Line::from("=== NAVIGATION ==="),
         Line::from(""),
@@ -423,10 +373,33 @@ fn render_help_popup(f: &mut Frame) {
         Line::from("esc: exit input mode"),
         Line::from(""),
     ];
-    let p = Paragraph::new(text).block(block).style(Style::default().bg(Color::DarkGray));
 
+    f.render_widget(
+        Paragraph::new(text).block(Block::default().borders(Borders::ALL).title(" HELP ")).style(Style::default().bg(Color::DarkGray)),
+    area);
+}
+
+fn render_action_menu(f: &mut Frame, _app: &AppState) {
+    let area = centered_rect(40, 20, f.area());
     f.render_widget(Clear, area);
-    f.render_widget(p, area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" GHOST ACTION ")
+        .style(Style::default().bg(Color::DarkGray));
+
+    let text = vec![
+        Line::from(""),
+        Line::from(Span::styled(" [!] KILL SWITCH ", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(""),
+        Line::from("Press [ENTER] to confirm kill"),
+        Line::from("Press [ESC] to cancer")
+    ];
+
+    f.render_widget(
+        Paragraph::new(text).block(block).alignment(Alignment::Center),
+        area
+    );
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

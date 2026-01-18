@@ -1,9 +1,3 @@
-use crate::models::{Ghost, GhostConfigUpdate, Task, TaskRequest};
-use async_trait::async_trait;
-use reqwest::Client;
-use std::env;
-use std::time::Duration;
-
 #[async_trait]
 pub trait C2Client: Send + Sync {
     async fn fetch_ghosts(&self) -> Result<Vec<Ghost>, String>;
@@ -15,7 +9,7 @@ pub trait C2Client: Send + Sync {
 
 pub struct RealClient {
     base_url: String,
-    http: Client,
+    http: Client
 }
 
 impl RealClient {
@@ -40,12 +34,10 @@ impl RealClient {
             base
         };
 
-        let http = Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .unwrap_or_default();
-
-        Self { base_url, http }
+        Self {
+            base_url,
+            http:: Client::new()
+        }
     }
 }
 
@@ -53,73 +45,53 @@ impl RealClient {
 impl C2Client for RealClient {
     async fn fetch_ghosts(&self) -> Result<Vec<Ghost>, String> {
         let url = format!("{}/ghosts", self.base_url);
-        self.http
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Network error: {}", e))?
-            .json::<Vec<Ghost>>()
-            .await
-            .map_err(|e| format!("Failed to parse Ghosts JSON: {}", e))
+        self.http.get(&url).send().await
+            .map_err(|_| "connection failed".to_string())?
+            .json::<Vec<Ghost>>().await
+            .map_err(|_| "failed to parse JSON".to_string())
     }
 
     async fn fetch_tasks(&self, ghost_id: &str) -> Result<Vec<Task>, String> {
         let url = format!("{}/ghosts/{}/tasks", self.base_url, ghost_id);
-        self.http
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Network error: {}", e))?
-            .json::<Vec<Task>>()
-            .await
-            .map_err(|e| format!("Failed to parse Tasks JSON: {}", e))
+        self.http.get(&url).send().await
+            .map_err(|_| "connection failed".to_string())?
+            .json::<Vec<Task>>().await
+            .map_err(|_| "failed to parse JSON".to_string())
     }
 
     async fn send_task(&self, ghost_id: &str, req: TaskRequest) -> Result<String, String> {
         let url = format!("{}/ghosts/{}/task", self.base_url, ghost_id);
-        let res = self.http
-            .post(&url)
-            .json(&req)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to send task: {}", e))?;
+        self.http.post(&url).json(&req).send().await
+            .map_err(|e| format!("ERROR {}", e))?;
 
         if res.status().is_success() {
-            Ok("Task queued successfully".to_string())
+            Ok("task queued successfully".to_string())
         } else {
-            Err(format!("Server returned error: {}", res.status()))
+            Err(format!("ERROR returned status {}", res.status()))
         }
     }
 
     async fn update_config(&self, ghost_id: &str, config: GhostConfigUpdate) -> Result<String, String> {
         let url = format!("{}/ghosts/{}", self.base_url, ghost_id);
-        let res = self.http
-            .post(&url)
-            .json(&config)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to update config: {}", e))?;
+        self.http.post(&url).json(&req).send().await
+            .map_err(|e| format!("ERROR {}", e))?;
 
         if res.status().is_success() {
-            Ok("Ghost configuration updated".to_string())
+            Ok("ghost config updated".to_string())
         } else {
-            Err(format!("Server returned error: {}", res.status()))
+            Err(format!("ERROR returned status {}", res.status()))
         }
     }
 
     async fn kill_ghost(&self, ghost_id: &str) -> Result<String, String> {
         let url = format!("{}/ghosts/{}/kill", self.base_url, ghost_id);
-        // Assuming kill endpoint doesn't require a body, or handles empty body.
-        let res = self.http
-            .post(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to send kill signal: {}", e))?;
+        self.http.post(&url).json(&req).send().await
+            .map_err(|e| format!("ERROR {}", e))?;
 
         if res.status().is_success() {
-            Ok("Kill signal sent".to_string())
+            Ok("kill signal sent".to_string())
         } else {
-            Err(format!("Server returned error: {}", res.status()))
+            Err(format!("ERROR returned status {}", res.status()))
         }
     }
 }
