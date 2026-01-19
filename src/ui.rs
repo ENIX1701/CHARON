@@ -127,7 +127,7 @@ fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
             Constraint::Length(3)
         ])
         .split(area);
-    
+
     let mut messages: Vec<ListItem> = Vec::new();
     let ghost_name = app.terminal.active_ghost_id.as_deref().unwrap_or("none");
 
@@ -143,7 +143,7 @@ fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
             Span::styled(format!("{} {}", task.command, task.args), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]);
         messages.push(ListItem::new(header));
-        
+
         match task.status {
             TaskStatus::Pending | TaskStatus::Sent => {
                 messages.push(ListItem::new(Line::from(vec![
@@ -175,9 +175,13 @@ fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
     let mut list_state = app.terminal.list_state.clone();
     f.render_stateful_widget(history_list, chunks[0], &mut list_state);
 
-    let (border_color, title) = (Color::Yellow, " COMMAND INPUT (TYPING) ");
+    let (border_color, title) = if app.terminal.input_mode {
+        (Color::Yellow, " COMMAND INPUT (TYPING) ")
+    } else {
+        (Color::DarkGray, " COMMAND INPUT (Press 'i' to type) ")
+    };
 
-    let cursor = "█";
+    let cursor = if app.terminal.input_mode { "█" } else { "" };
 
     let input_text = vec![
         Line::from(vec![

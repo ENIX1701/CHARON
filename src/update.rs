@@ -207,13 +207,19 @@ fn handle_esc(app: &mut AppState) {
     }
 
     if app.current_screen == CurrentScreen::Terminal {
-        app.current_screen = CurrentScreen::Dashboard;
+        if app.terminal.input_mode {
+            app.terminal.input_mode = false;
+        }
     }
 }
 
 fn handle_backspace(app: &mut AppState) {
     match app.current_screen {
-        CurrentScreen::Terminal => { app.terminal.input_buffer.pop(); },
+        CurrentScreen::Terminal => {
+            if app.terminal.input_mode {
+                app.terminal.input_buffer.pop();
+            }
+        },
         CurrentScreen::Config => match app.config.selected_field {
             ConfigField::Sleep => { app.config.sleep_input.pop(); },
             ConfigField::Jitter => { app.config.jitter_input.pop(); },
@@ -230,7 +236,7 @@ fn handle_backspace(app: &mut AppState) {
 
 fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
     let is_typing = match app.current_screen {
-        CurrentScreen::Terminal => true,
+        CurrentScreen::Terminal => app.terminal.input_mode,
         CurrentScreen::Config => c.is_numeric(),
         CurrentScreen::Builder => matches!(app.builder.selected_field, BuilderField::Url | BuilderField::Port),
         _ => false
@@ -257,7 +263,11 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
             }
         },
         CurrentScreen::Terminal => {
-            app.terminal.input_buffer.push(c);
+            if app.terminal.input_mode {
+                app.terminal.input_buffer.push(c);
+            } else if c == 'i' {
+                app.terminal.input_mode = true;
+            }
         },
         CurrentScreen::Config => {
             if c.is_numeric() {

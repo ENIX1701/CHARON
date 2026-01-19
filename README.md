@@ -18,7 +18,7 @@ or
 ## Run locally
 
 ```bash
-# clone the project and navigate to the directory
+# clone the project and navigate to its directory
 git clone https://github.com/ENIX1701/CHARON
 cd CHARON
 
