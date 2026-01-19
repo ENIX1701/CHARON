@@ -28,15 +28,30 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         Action::Resize(_, _) => {},
 
         // global navigation
-        Action::NextTab => app.next_tab(),
+        Action::NextTab => { app.next_tab(); return None },
         Action::PrevTab => app.prev_tab(),
         Action::ToggleHelp => app.show_help = !app.show_help,
+
+        // auto refresh
+        Action::AutoRefresh => {
+            if app.show_action_menu { return None; }
+
+            match app.current_screen {
+                CurrentScreen::Dashboard => return Some(Command::FetchGhosts),
+                CurrentScreen::Terminal => {
+                    if let Some(gid) = &app.terminal.active_ghost_id {
+                        return Some(Command::FetchTasks(gid.clone()));
+                    }
+                },
+                _ => {}
+            }
+        }
 
         // context-sensitive input
         Action::Up => handle_nav_up(app),
         Action::Down => handle_nav_down(app),
         Action::Left => app.prev_tab(),
-        Action::Right => app.next_tab(),
+        Action::Right => { app.next_tab(); return None },
         Action::Enter => return handle_enter(app),
         Action::Esc => handle_esc(app),
         Action::Backspace => handle_backspace(app),

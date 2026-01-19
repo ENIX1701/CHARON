@@ -39,5 +39,7 @@ pub enum Action {
     ReceiveTaskSendResult(Result<String, String>),
     ReceiveConfigUpdateResult(Result<String, String>),
     ReceiveKillResult(Result<String, String>),
-    ReceiveBuildResult(Result<String, String>)
+    ReceiveBuildResult(Result<String, String>),
+
+    AutoRefresh
 }

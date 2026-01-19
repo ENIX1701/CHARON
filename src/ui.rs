@@ -138,30 +138,30 @@ fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
     }
 
     for task in &app.terminal.tasks {
-        let header = Line::from(vec![
+        let mut lines = Vec::new();
+        
+        lines.push(Line::from(vec![
             Span::styled(format!("ghost@{}> ", ghost_name), Style::default().fg(Color::Green)),
             Span::styled(format!("{} {}", task.command, task.args), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
-        ]);
-        messages.push(ListItem::new(header));
+        ]));
 
         match task.status {
             TaskStatus::Pending | TaskStatus::Sent => {
-                messages.push(ListItem::new(Line::from(vec![
+                lines.push(Line::from(vec![
                     Span::styled("[PENDING...]", Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC))
-                ])));
+                ]));
             },
             _ => {
                 if let Some(result) = &task.result {
                     for line in result.lines() {
-                        messages.push(ListItem::new(Line::from(vec![
-                            Span::raw(line)
-                        ])));
+                        lines.push(Line::from(Span::raw(line)));
                     }
                 }
             }
         }
+        lines.push(Line::from(""));
 
-        messages.push(ListItem::new(Line::from("")));
+        messages.push(ListItem::new(lines));
     }
 
     let history_block = Block::default()
