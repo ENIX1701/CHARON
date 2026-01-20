@@ -52,8 +52,8 @@ Please navigate to the [user manual](docs/MANUAL.md) section of the documentatio
 
 ## Roadmap
 
-- [ ] GHOST payload builder
-- [ ] Code refactor and modularization
+- [x] GHOST payload builder
+- [x] Code refactor and modularization
 - [ ] Local cache
 - [ ] Improved GHOST state management (automatic inactive or manual cleanup)
 
