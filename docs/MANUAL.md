@@ -7,7 +7,7 @@ CHARON is a terminal-based user interface for managing SHADOW C2 implants (calle
 
 These controls apply regardless of the currently active tab.
 
-|Key    | Action        |
+| Key   | Action        |
 |-------|---------------|
 | `←/→` | Switch tabs   |
 | `h`   | Toggle help   |

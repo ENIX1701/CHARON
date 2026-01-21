@@ -4,7 +4,7 @@ CHARON is divided into four main operational contexts, accessible via tabs.
 
 ## Dashboard
 
-// PIC
+![](images/charon-dashboard.png)
 
 Main view. Provides a real-time table of all GHOSTs that have checked in with the server.
 
@@ -14,7 +14,7 @@ Main view. Provides a real-time table of all GHOSTs that have checked in with th
 
 ## Terminal
 
-// PIC
+![](images/charon-terminal.png)
 
 Allows direct interaction with the selected GHOST.
 
@@ -29,7 +29,7 @@ Allows direct interaction with the selected GHOST.
 
 ## Config
 
-// PIC
+![](images/charon-config.png)
 
 This tab allows, well, you wouldn't guess, configuration! ...of the GHOSTs.
 
@@ -41,8 +41,10 @@ There is a big button that lets you submit those to SHADOW (which, in turn, pass
 
 ## Builder
 
-// PIC
+![](images/charon-builder-general.png)
 
 You can build GHOSTs with it. More extensive documentation can be found [here](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md). Also, [usage guide](MANUAL.md#builder).
 
 You can control which modules, and which tactics in these modules are enabled. Full control. Always.
+
+![](images/charon-builder-impact.png)
