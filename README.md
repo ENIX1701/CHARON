@@ -2,7 +2,7 @@
 
 # CHARON
 
-Terminal user interface for [SHADOW](https://github.com/ENIX1701/SHADOW) written in Rust.
+Terminal user interface for [SHADOW](https://github.com/ENIX1701/SHADOW) written in Rust. Not the prettiest, but really functional.  
 
 // GIF
 

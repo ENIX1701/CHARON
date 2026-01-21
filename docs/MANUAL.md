@@ -19,7 +19,7 @@ The interface is comprised of 4 main tabs. Each of them serves a unique purpose,
 
 ### Dashboard
 
-// PIC
+![](images/charon-dashboard.png)
 
 This is the default view. It displays all GHOSTs connected to the SHADOW server and basic information about them.
 
@@ -32,7 +32,7 @@ This is the default view. It displays all GHOSTs connected to the SHADOW server 
 
 ### Terminal
 
-// PIC
+![](images/charon-terminal.png)
 
 Terminal window allows easy GHOST management. This window operates on a GHOST currently selected in the dashboard panel.
 
@@ -55,7 +55,7 @@ The types of commands you can run are:
 
 ### Config
 
-// PIC
+![](images/charon-config.png)
 
 This tab is used to send configuration changes to the CHOST currently selected on dashboard panel. Input fields require integer numeric input.
 
@@ -69,11 +69,11 @@ This tab is used to send configuration changes to the CHOST currently selected o
 
 ### Builder
 
-// PIC
-
 This tab allows the creation of custom GHOSTs. 
 
 #### SHADOW configuration
+
+![](images/charon-builder-general.png)
 
 `SHADOW_URL` - IP or URL of the SHADOW C2 server
 `PORT` - port of the aforementioned server
@@ -82,11 +82,15 @@ This tab allows the creation of custom GHOSTs.
 
 For what each module does, please refer to [GHOST docs](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md).
 
+![](images/charon-builder-persistence.png)
+
 #### Resulting binary
 
 Once configured, select `[ COMPILE PAYLOAD ]` to build the binary. It will be placed in GHOST's build directory (`GHOST/build/bin/Ghost` relative to AETHER).
 
 ## Status indicators
+
+![](images/charon-status.png)
 
 Bottom of the window shows current status of CHARON. Below is a very short guide to interpreting it.
 
