@@ -43,6 +43,6 @@ There is a big button that lets you submit those to SHADOW (which, in turn, pass
 
 // PIC
 
-You can build GHOSTs with it. More extensive documentation can be found [here](https://github.com/ENIX1701/GHOST/blob/main/docs/BUILD.md).
+You can build GHOSTs with it. More extensive documentation can be found [here](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md). Also, [usage guide](MANUAL.md#builder).
 
 You can control which modules, and which tactics in these modules are enabled. Full control. Always.

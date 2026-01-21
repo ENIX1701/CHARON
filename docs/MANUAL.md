@@ -37,13 +37,14 @@ This is the default view. It displays all GHOSTs connected to the SHADOW server 
 Terminal window allows easy GHOST management. This window operates on a GHOST currently selected in the dashboard panel.
 
 The types of commands you can run are:
-|Command|Args|Description|
-|-|-|-|
-|`EXEC` (default)|`<command to run>`| Executes command provided on GHOSTs system |
-|`IMPACT`|`-`| Executes the configured IMPACT module of a GHOST (parametrizable in compilation) |
+| Command           | Args                  | Description                                                                       |
+|-------------------|-----------------------|-----------------------------------------------------------------------------------|
+| `EXEC` (default)  | `<command to run>`    | Executes command provided on GHOSTs system                                        |
+| `IMPACT`          | `-`                   | Executes the configured IMPACT module of a GHOST (parametrizable in compilation)  |
+| `STOP_HAUNT`      | `-`                   | Kills GHOST, which then cleans up and self destroys                               |
 
 > [!NOTE]
-> If no explicit command is provided (so you input `whoami` into the terminal, for example), CHARON defaults to `EXEC`, so you can easily ommit that part
+> If no explicit command is provided (so you input `whoami` into the terminal, for example), CHARON defaults to `EXEC`
 
 #### Navigation
 
@@ -79,15 +80,7 @@ This tab allows the creation of custom GHOSTs.
 
 #### Modules
 
-> [!WARNING]
-> This section is outdated. Builder is more powerful now, it lets you parametrize techniques inside of these modules as well. Expect an updated version soon.
-
-| Name              | Functionality                                                                                                     |
-|-------------------|-------------------------------------------------------------------------------------------------------------------|
-| `Debug mode`      | Verbose [logging](https://github.com/ENIX1701/GHOST/docs/CODE_GUIDELINES.md#terminal-output) on GHOSTs            |
-| `Persistence`     | Multiple [persistence](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#persistence) mechanisms            |
-| `Impact`          | Enables the [`IMPACT`](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#impact) command and functionality  |
-| `Exfiltration`    | Enables different [exfiltration](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md#exfiltration) options    |
+For what each module does, please refer to [GHOST docs](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md).
 
 #### Resulting binary
 
