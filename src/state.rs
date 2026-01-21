@@ -311,7 +311,7 @@ impl BuilderState {
             },
             Persistence => match self.selected_field {
                 CategorySelect => PersistToggle,
-                PersistToggle => PersistRunControl,
+                PersistToggle => if self.enable_persistence { PersistRunControl } else { Submit },
                 PersistRunControl => PersistService,
                 PersistService => PersistCron,
                 PersistCron => Submit,
@@ -319,7 +319,7 @@ impl BuilderState {
                 _ => CategorySelect
             },
             Impact => match self.selected_field {
-                CategorySelect => ImpactToggle,
+                CategorySelect => if self.enable_impact { ImpactToggle } else { Submit },
                 ImpactToggle => ImpactEncrypt,
                 ImpactEncrypt => ImpactWipe,
                 ImpactWipe => Submit,
@@ -327,7 +327,7 @@ impl BuilderState {
                 _ => CategorySelect
             },
             Exfiltration => match self.selected_field {
-                CategorySelect => ExfilToggle,
+                CategorySelect => if self.enable_exfil { ExfilToggle } else { Submit },
                 ExfilToggle => ExfilHttp,
                 ExfilHttp => ExfilDns,
                 ExfilDns => Submit,
@@ -356,7 +356,7 @@ impl BuilderState {
                 PersistRunControl => PersistToggle,
                 PersistService => PersistRunControl,
                 PersistCron => PersistService,
-                Submit => PersistCron,
+                Submit => if self.enable_persistence { PersistCron } else { Submit },
                 _ => CategorySelect
             },
             Impact => match self.selected_field {
@@ -364,7 +364,7 @@ impl BuilderState {
                 ImpactToggle => CategorySelect,
                 ImpactEncrypt => ImpactToggle,
                 ImpactWipe => ImpactEncrypt,
-                Submit => ImpactWipe,
+                Submit => if self.enable_impact { ImpactWipe } else { Submit },
                 _ => CategorySelect
             },
             Exfiltration => match self.selected_field {
@@ -372,7 +372,7 @@ impl BuilderState {
                 ExfilToggle => CategorySelect,
                 ExfilHttp => ExfilToggle,
                 ExfilDns => ExfilHttp,
-                Submit => ExfilDns,
+                Submit => if self.enable_exfil { ExfilDns } else { Submit },
                 _ => CategorySelect
             }
         };

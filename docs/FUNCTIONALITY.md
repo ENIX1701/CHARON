@@ -45,4 +45,4 @@ There is a big button that lets you submit those to SHADOW (which, in turn, pass
 
 You can build GHOSTs with it. More extensive documentation can be found [here](https://github.com/ENIX1701/GHOST/blob/main/docs/BUILD.md).
 
-For now you can control the top-level flags. The release version will feature a fully working builder with parametrizable payloads in each category. Hopefully x3
+You can control which modules, and which tactics in these modules are enabled. Full control. Always.

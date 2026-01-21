@@ -354,16 +354,36 @@ fn handle_builder_toggle(app: &mut AppState) {
     match app.builder.selected_field {
         EnableDebug => app.builder.enable_debug = !app.builder.enable_debug,
 
-        PersistToggle => app.builder.enable_persistence = !app.builder.enable_persistence,
+        PersistToggle => {
+            app.builder.enable_persistence = !app.builder.enable_persistence;
+
+            if !app.builder.enable_persistence {
+                app.builder.persist_runcontrol = false;
+                app.builder.persist_service = false;
+                app.builder.persist_cron = false;
+            }
+        },
         PersistRunControl => app.builder.persist_runcontrol = !app.builder.persist_runcontrol,
         PersistService => app.builder.persist_service = !app.builder.persist_service,
         PersistCron => app.builder.persist_cron = !app.builder.persist_cron,
 
-        ImpactToggle => app.builder.enable_impact = !app.builder.enable_impact,
+        ImpactToggle => {
+            app.builder.enable_impact = !app.builder.enable_impact;
+
+            if !app.builder.enable_impact {
+                app.builder.impact_encrypt = false;
+                app.builder.impact_wipe = false;
+            }
+        },
         ImpactEncrypt => app.builder.impact_encrypt = !app.builder.impact_encrypt,
         ImpactWipe => app.builder.impact_wipe = !app.builder.impact_wipe,
 
-        ExfilToggle => app.builder.enable_exfil = !app.builder.enable_exfil,
+        ExfilToggle => {
+            app.builder.enable_exfil = !app.builder.enable_exfil;
+
+            app.builder.exfil_http = false;
+            app.builder.exfil_dns = false;
+        },
         ExfilHttp => app.builder.exfil_http = !app.builder.exfil_http,
         ExfilDns => app.builder.exfil_dns = !app.builder.exfil_dns,
         _ => {}

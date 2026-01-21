@@ -79,6 +79,9 @@ This tab allows the creation of custom GHOSTs.
 
 #### Modules
 
+> [!WARNING]
+> This section is outdated. Builder is more powerful now, it lets you parametrize techniques inside of these modules as well. Expect an updated version soon.
+
 | Name              | Functionality                                                                                                     |
 |-------------------|-------------------------------------------------------------------------------------------------------------------|
 | `Debug mode`      | Verbose [logging](https://github.com/ENIX1701/GHOST/docs/CODE_GUIDELINES.md#terminal-output) on GHOSTs            |

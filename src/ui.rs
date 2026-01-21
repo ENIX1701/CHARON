@@ -326,32 +326,49 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
             );
         },
         BuilderCategory::Persistence => {
-            let items = vec![
-                ("enable persistence", app.builder.enable_persistence, BuilderField::PersistToggle),
-                ("method: runcontrol", app.builder.persist_runcontrol, BuilderField::PersistRunControl),
-                ("method: service", app.builder.persist_service, BuilderField::PersistService),
-                ("method: cron", app.builder.persist_cron, BuilderField::PersistCron),
+            let mut items = vec![
+                ("enable persistence", app.builder.enable_persistence, BuilderField::PersistToggle)
             ];
+
+            if app.builder.enable_persistence {
+                items.extend_from_slice(&[
+                    ("method: runcontrol", app.builder.persist_runcontrol, BuilderField::PersistRunControl),
+                    ("method: service", app.builder.persist_service, BuilderField::PersistService),
+                    ("method: cron", app.builder.persist_cron, BuilderField::PersistCron)
+                ]);
+            }
+
             render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
         },
         BuilderCategory::Impact => {
-            let items = vec![
-                ("enable impact", app.builder.enable_impact, BuilderField::ImpactToggle),
-                ("method: encryption", app.builder.impact_encrypt, BuilderField::ImpactEncrypt),
-                ("method: wipe", app.builder.impact_wipe, BuilderField::ImpactWipe),
+            let mut items = vec![
+                ("enable impact", app.builder.enable_impact, BuilderField::ImpactToggle)
             ];
+
+            if app.builder.enable_impact {
+                items.extend_from_slice(&[
+                    ("method: encryption", app.builder.impact_encrypt, BuilderField::ImpactEncrypt),
+                    ("method: wipe", app.builder.impact_wipe, BuilderField::ImpactWipe)
+                ]);
+            }
+
             render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
         },
         BuilderCategory::Exfiltration => {
-            let items = vec![
-                ("enable exfiltration", app.builder.enable_exfil, BuilderField::ExfilToggle),
-                ("method: http", app.builder.exfil_http, BuilderField::ExfilHttp),
-                ("method: dns", app.builder.exfil_dns, BuilderField::ExfilDns),
+            let mut items = vec![
+                ("enable exfiltration", app.builder.enable_exfil, BuilderField::ExfilToggle)
             ];
+
+            if app.builder.enable_exfil {
+                items.extend_from_slice(&[
+                    ("method: http", app.builder.exfil_http, BuilderField::ExfilHttp),
+                    ("method: dns", app.builder.exfil_dns, BuilderField::ExfilDns)
+                ]);
+            }
+
             render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
         }
     }
-
 
     let btn_style = if app.builder.selected_field == BuilderField::Submit {
         Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
