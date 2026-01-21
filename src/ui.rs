@@ -1,5 +1,5 @@
 use crate::models::TaskStatus;
-use crate::state::{AppState, BuilderField, ConfigField, CurrentScreen};
+use crate::state::{AppState, BuilderCategory, BuilderField, ConfigField, CurrentScreen};
 use ratatui::{
     prelude::*,
     widgets::{
@@ -248,10 +248,10 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // url/port
-            Constraint::Length(8),  // toggles
+            Constraint::Length(3),  // category tabs
+            Constraint::Min(1),     // content
             Constraint::Length(3),  // submit
-            Constraint::Min(1)      // status
+            Constraint::Length(3)   // status
         ])
         .margin(1)
         .split(area);
@@ -259,57 +259,99 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
     let main_block = Block::default().borders(Borders::ALL).title(" GHOST PAYLOAD BUILDER ");
     f.render_widget(main_block, area);
 
-    let net_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-        .split(chunks[0]);
-    
-    let get_style = |field: BuilderField| {
-        if app.builder.selected_field == field {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        }
+    let categories = vec![" GENERAL ", " PERSISTENCE ", " IMPACT ", " EXFILTRATION "];
+    let cat_index = match app.builder.active_category {
+        BuilderCategory::General => 0,
+        BuilderCategory::Persistence => 1,
+        BuilderCategory::Impact => 2,
+        BuilderCategory::Exfiltration => 3
     };
 
-    f.render_widget(
-        Paragraph::new(format!("SHADOW URL: {}", app.builder.target_url))
-        .block(Block::default().borders(Borders::ALL).border_style(get_style(BuilderField::Url))),
-        net_chunks[0]
-    );
+    let cat_style = if app.builder.selected_field == BuilderField::CategorySelect {
+        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::Cyan)
+    };
 
-    f.render_widget(
-        Paragraph::new(format!("PORT: {}", app.builder.target_port))
-        .block(Block::default().borders(Borders::ALL).border_style(get_style(BuilderField::Port))),
-        net_chunks[1]
-    );
+    let cat_tabs = Tabs::new(categories)
+        .block(Block::default().borders(Borders::ALL).border_style(cat_style))
+        .select(cat_index)
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+    f.render_widget(cat_tabs, chunks[0]);
 
-    let toggles = vec![
-        ("Debug mode", app.builder.enable_debug, BuilderField::EnableDebug),
-        ("Persistence", app.builder.enable_persistence, BuilderField::EnablePersistence),
-        ("Impact", app.builder.enable_impact, BuilderField::EnableImpact),
-        ("Exfiltration", app.builder.enable_exfil, BuilderField::EnableExfil)
-    ];
-    
-    let items: Vec<ListItem> = toggles
-        .iter()
-        .map(|(label, active, field)| {
-            let check = if *active { "[x]" } else { "[ ]" };
-            let content = format!("{} {}", check, label);
-            let style = if app.builder.selected_field == *field {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
+    match app.builder.active_category {
+        BuilderCategory::General => {
+            let gen_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Length(3)])
+                .split(chunks[1]);
+
+            let get_style = |field: BuilderField| {
+                if app.builder.selected_field == field {
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                }
             };
 
-            ListItem::new(content).style(style)
-        })
-        .collect();
+            f.render_widget(
+                Paragraph::new(format!("SHADOW URL: {}", app.builder.target_url))
+                .block(
+                    Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(get_style(BuilderField::Url))
+                ),
+                gen_chunks[0]
+            );
 
-    f.render_widget(
-        List::new(items).block(Block::default().borders(Borders::ALL).title(" Modules ")),
-        chunks[1]
-    );
+            f.render_widget(
+                Paragraph::new(format!("PORT: {}", app.builder.target_port))
+                .block(
+                    Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(get_style(BuilderField::Port))
+                ),
+                gen_chunks[1]
+            );
+
+            let dbg_check = if app.builder.enable_debug { "[x]" } else { "[ ]" };
+            f.render_widget(
+                Paragraph::new(format!("{} debug mode", dbg_check))
+                .block(
+                    Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(get_style(BuilderField::EnableDebug))
+                ),
+                gen_chunks[2]
+            );
+        },
+        BuilderCategory::Persistence => {
+            let items = vec![
+                ("enable persistence", app.builder.enable_persistence, BuilderField::PersistToggle),
+                ("method: runcontrol", app.builder.persist_runcontrol, BuilderField::PersistRunControl),
+                ("method: service", app.builder.persist_service, BuilderField::PersistService),
+                ("method: cron", app.builder.persist_cron, BuilderField::PersistCron),
+            ];
+            render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
+        },
+        BuilderCategory::Impact => {
+            let items = vec![
+                ("enable impact", app.builder.enable_impact, BuilderField::ImpactToggle),
+                ("method: encryption", app.builder.impact_encrypt, BuilderField::ImpactEncrypt),
+                ("method: wipe", app.builder.impact_wipe, BuilderField::ImpactWipe),
+            ];
+            render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
+        },
+        BuilderCategory::Exfiltration => {
+            let items = vec![
+                ("enable exfiltration", app.builder.enable_exfil, BuilderField::ExfilToggle),
+                ("method: http", app.builder.exfil_http, BuilderField::ExfilHttp),
+                ("method: dns", app.builder.exfil_dns, BuilderField::ExfilDns),
+            ];
+            render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
+        }
+    }
+
 
     let btn_style = if app.builder.selected_field == BuilderField::Submit {
         Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
@@ -336,6 +378,28 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
         )
         .style(Style::default().fg(status_color)),
         chunks[3]
+    );
+}
+
+fn render_checkbox_list(f: &mut Frame, selected: &BuilderField, items: Vec<(&str, bool, BuilderField)>, area: Rect) {
+    let list_items: Vec<ListItem> = items
+        .iter()
+        .map(|(label, active, field)| {
+            let check = if *active { "[x]" } else { "[ ]" };
+            let content = format!("{} {}", check, label);
+            let style = if *selected == *field {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(content).style(style)
+        })
+        .collect();
+
+    f.render_widget(
+        List::new(list_items).block(Block::default().borders(Borders::ALL)),
+        area
     );
 }
 

