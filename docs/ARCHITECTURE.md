@@ -77,7 +77,7 @@ GHOSTs build orchestrator works as follows on a build trigger:
 
 **1. Update state**
 
-Add a new variant to `CurrentScreen` enum in [`state.rs`](../src/state.rs) and a corresopnding sub-state struct (like `LogState`).
+Add a new variant to `CurrentScreen` enum in [`state.rs`](../src/state.rs) and a corresponding sub-state struct (like `LogState`).
 
 **2. Update UI**
 

@@ -94,7 +94,7 @@ Once configured, select `[ COMPILE PAYLOAD ]` to build the binary. It will be pl
 
 Bottom of the window shows current status of CHARON. Below is a very short guide to interpreting it.
 
-| Status    | Description           |
+| Color     | Description           |
 |-----------|-----------------------|
 | 🟩        | Operating normally    |
 | 🟥        | Error                 |
