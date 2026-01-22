@@ -319,16 +319,16 @@ impl BuilderState {
                 _ => CategorySelect
             },
             Impact => match self.selected_field {
-                CategorySelect => if self.enable_impact { ImpactToggle } else { Submit },
-                ImpactToggle => ImpactEncrypt,
+                CategorySelect => ImpactToggle,
+                ImpactToggle => if self.enable_impact { ImpactEncrypt } else { Submit },
                 ImpactEncrypt => ImpactWipe,
                 ImpactWipe => Submit,
                 Submit => CategorySelect,
                 _ => CategorySelect
             },
             Exfiltration => match self.selected_field {
-                CategorySelect => if self.enable_exfil { ExfilToggle } else { Submit },
-                ExfilToggle => ExfilHttp,
+                CategorySelect => ExfilToggle,
+                ExfilToggle => if self.enable_exfil { ExfilHttp } else { Submit },
                 ExfilHttp => ExfilDns,
                 ExfilDns => Submit,
                 Submit => CategorySelect,
@@ -356,7 +356,7 @@ impl BuilderState {
                 PersistRunControl => PersistToggle,
                 PersistService => PersistRunControl,
                 PersistCron => PersistService,
-                Submit => if self.enable_persistence { PersistCron } else { Submit },
+                Submit => if self.enable_persistence { PersistCron } else { PersistToggle },
                 _ => CategorySelect
             },
             Impact => match self.selected_field {
@@ -364,7 +364,7 @@ impl BuilderState {
                 ImpactToggle => CategorySelect,
                 ImpactEncrypt => ImpactToggle,
                 ImpactWipe => ImpactEncrypt,
-                Submit => if self.enable_impact { ImpactWipe } else { Submit },
+                Submit => if self.enable_impact { ImpactWipe } else { ImpactToggle },
                 _ => CategorySelect
             },
             Exfiltration => match self.selected_field {
@@ -372,7 +372,7 @@ impl BuilderState {
                 ExfilToggle => CategorySelect,
                 ExfilHttp => ExfilToggle,
                 ExfilDns => ExfilHttp,
-                Submit => if self.enable_exfil { ExfilDns } else { Submit },
+                Submit => if self.enable_exfil { ExfilDns } else { ExfilToggle },
                 _ => CategorySelect
             }
         };

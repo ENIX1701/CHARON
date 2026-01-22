@@ -1,14 +1,8 @@
-mod action;
-mod client;
-mod models;
-mod state;
-mod ui;
-mod update;
-
-use crate::action::Action;
-use crate::client::{C2Client, RealClient};
-use crate::state::AppState;
-use crate::update::Command;
+use charon::action::Action;
+use charon::client::{C2Client, RealClient};
+use charon::state::AppState;
+use charon::update::{self, Command};
+use charon::ui;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},

@@ -40,6 +40,8 @@ impl RealClient {
             base
         };
 
+        let base_url = base_url.trim_end_matches('/').to_string(); 
+
         let http = Client::builder()
             .timeout(Duration::from_secs(5))
             .build()
@@ -109,7 +111,7 @@ impl C2Client for RealClient {
 
     async fn kill_ghost(&self, ghost_id: &str) -> Result<String, String> {
         let url = format!("{}/ghosts/{}/kill", self.base_url, ghost_id);
-        // Assuming kill endpoint doesn't require a body, or handles empty body.
+
         let res = self.http
             .post(&url)
             .send()
