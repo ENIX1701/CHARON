@@ -56,7 +56,7 @@ Please navigate to the [user manual](docs/MANUAL.md) section of the documentatio
 - [x] Code refactor and modularization
 - [ ] Local cache
 - [ ] Improved GHOST state management (automatic inactive or manual cleanup)
-- [ ] Update the MANUAL with new features (and refresh the old ones)
+- [x] Update the MANUAL with new features (and refresh the old ones)
 
 ## Legal
 

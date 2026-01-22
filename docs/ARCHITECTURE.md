@@ -63,13 +63,13 @@ If you need reference as to what these are, head over to the [SHADOW API guide](
 
 **Located at**: `src/update.rs`
 
-CHARON's unique. CHARON's powerful. CHARON can command GHOSTs to life. It can build them.
+CHARON's unique. CHARON's powerful. CHARON can command GHOSTs to life.
 
 GHOSTs build orchestrator works as follows on a build trigger:
-1. Spawns a blocking task in `tokio` runtime
-2. Invokes `cmake` on the `../GHOST` directory, passing all the necessary flags to it
-3. Invokes `make` to compile the GHOST
-4. Returns the result on screen when the binary is built in `../GHOST/build/bin/Ghost`
+1. CHARON collects all configuration options as flags
+2. Sends a `POST` request to SHADOW with the configuration
+3. SHADOW spins up a build environemnt to compile GHOST from source
+4. CHARON awaits the response containing the download URL for the binary
 
 ## Extension guide
 

@@ -80,16 +80,17 @@ This tab allows the creation of custom GHOSTs.
 
 #### Modules
 
-For what each module does, please refer to [GHOST docs](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md).
+Allows you to configure which modules will be present in the output binary. The *Module* must be enabled to toggle the *Methods*.
+
+For what each *Module* does, please refer to [GHOST docs](https://github.com/ENIX1701/GHOST/docs/FUNCTIONALITY.md).
 
 ![](images/charon-builder-persistence.png)
 
 #### Resulting binary
 
-> [!IMPORTANT]
-> REFACTOR OF THIS INCOMING. The binaries will now be built SHADOW-side, which will make it a lot easier to serve in the Docker version. I think it's the best way. Surely, right...? 
+Once configured, select `[ COMPILE PAYLOAD ]`.
 
-Once configured, select `[ COMPILE PAYLOAD ]` to build the binary. It will be placed in GHOST's build directory (`GHOST/build/bin/Ghost` relative to AETHER).
+CHARON will send the build configuration to SHADOW, that will then compile the binary and make it available for download. The download path will be displayed in the status bar upon success.
 
 ## Status indicators
 
