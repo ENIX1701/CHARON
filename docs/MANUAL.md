@@ -86,6 +86,9 @@ For what each module does, please refer to [GHOST docs](https://github.com/ENIX1
 
 #### Resulting binary
 
+> [!IMPORTANT]
+> REFACTOR OF THIS INCOMING. The binaries will now be built SHADOW-side, which will make it a lot easier to serve in the Docker version. I think it's the best way. Surely, right...? 
+
 Once configured, select `[ COMPILE PAYLOAD ]` to build the binary. It will be placed in GHOST's build directory (`GHOST/build/bin/Ghost` relative to AETHER).
 
 ## Status indicators

