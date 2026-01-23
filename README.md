@@ -57,6 +57,7 @@ Please navigate to the [user manual](docs/MANUAL.md) section of the documentatio
 - [ ] Local cache
 - [ ] Improved GHOST state management (automatic inactive or manual cleanup)
 - [x] Update the MANUAL with new features (and refresh the old ones)
+- [ ] Tab listing ready GHOST binaries (with arguments/build parameters)
 
 ## Legal
 

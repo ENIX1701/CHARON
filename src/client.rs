@@ -44,7 +44,7 @@ impl RealClient {
         let base_url = base_url.trim_end_matches('/').to_string(); 
 
         let http = Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(120))
             .build()
             .unwrap_or_default();
 

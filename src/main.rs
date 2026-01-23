@@ -78,10 +78,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
-
     Ok(())
 }
 
@@ -156,7 +152,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
 
             tokio::spawn(async move {
                 let res = c.request_build(req).await;
-                let _ = t.send(Action::ReceiveKillResult(res)).await;
+                let _ = t.send(Action::ReceiveBuildResult(res)).await;
             });
         },
         Command::Quit => {
