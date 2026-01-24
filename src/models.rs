@@ -76,6 +76,7 @@ pub struct GhostBuildRequest {
         // impact
         pub enable_impact: bool,
         pub impact_encrypt: bool,
+        pub encryption_algo: String,
         pub impact_wipe: bool,
 
         // exfiltration

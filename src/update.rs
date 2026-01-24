@@ -24,6 +24,7 @@ pub enum Command {
         // impact
         impact: bool,
         impact_encrypt: bool,
+        encryption_algo: String,
         impact_wipe: bool,
 
         // exfiltration
@@ -376,6 +377,11 @@ fn handle_builder_toggle(app: &mut AppState) {
             }
         },
         ImpactEncrypt => app.builder.impact_encrypt = !app.builder.impact_encrypt,
+
+        ImpactEncryptAlgoXor => app.builder.encryption_algo = "XOR".to_string(),
+        ImpactEncryptAlgoAes => app.builder.encryption_algo = "AES".to_string(),
+        ImpactEncryptAlgoChacha => app.builder.encryption_algo = "CHACHA".to_string(),
+
         ImpactWipe => app.builder.impact_wipe = !app.builder.impact_wipe,
 
         ExfilToggle => {
@@ -405,6 +411,7 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
 
         impact: app.builder.enable_impact,
         impact_encrypt: app.builder.impact_encrypt,
+        encryption_algo: app.builder.encryption_algo.clone(),
         impact_wipe: app.builder.impact_wipe,
 
         exfil: app.builder.enable_exfil,

@@ -224,6 +224,9 @@ pub enum BuilderField {
     // impact
     ImpactToggle,
     ImpactEncrypt,
+    ImpactEncryptAlgoXor,
+    ImpactEncryptAlgoAes,
+    ImpactEncryptAlgoChacha,
     ImpactWipe,
 
     // exfiltration
@@ -253,6 +256,7 @@ pub struct BuilderState {
     // impact
     pub enable_impact: bool,
     pub impact_encrypt: bool,
+    pub encryption_algo: String,
     pub impact_wipe: bool,
 
     // exfiltration
@@ -283,6 +287,7 @@ impl Default for BuilderState {
             // impact
             enable_impact: true,
             impact_encrypt: true,
+            encryption_algo: "XOR".to_string(),
             impact_wipe: false,
 
             // exfiltration
@@ -321,7 +326,10 @@ impl BuilderState {
             Impact => match self.selected_field {
                 CategorySelect => ImpactToggle,
                 ImpactToggle => if self.enable_impact { ImpactEncrypt } else { Submit },
-                ImpactEncrypt => ImpactWipe,
+                ImpactEncrypt => if self.impact_encrypt { ImpactEncryptAlgoXor } else { ImpactWipe },
+                ImpactEncryptAlgoXor => ImpactEncryptAlgoAes,
+                ImpactEncryptAlgoAes => ImpactEncryptAlgoChacha,
+                ImpactEncryptAlgoChacha => ImpactWipe,
                 ImpactWipe => Submit,
                 Submit => CategorySelect,
                 _ => CategorySelect
@@ -363,7 +371,12 @@ impl BuilderState {
                 CategorySelect => Submit,
                 ImpactToggle => CategorySelect,
                 ImpactEncrypt => ImpactToggle,
-                ImpactWipe => ImpactEncrypt,
+
+                ImpactEncryptAlgoXor => ImpactEncrypt,
+                ImpactEncryptAlgoAes => ImpactEncryptAlgoXor,
+                ImpactEncryptAlgoChacha => ImpactEncryptAlgoAes,
+
+                ImpactWipe => if self.impact_encrypt { ImpactEncryptAlgoChacha } else { ImpactEncrypt },
                 Submit => if self.enable_impact { ImpactWipe } else { ImpactToggle },
                 _ => CategorySelect
             },

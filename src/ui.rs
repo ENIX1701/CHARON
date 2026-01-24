@@ -341,18 +341,73 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
             render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
         },
         BuilderCategory::Impact => {
-            let mut items = vec![
-                ("enable impact", app.builder.enable_impact, BuilderField::ImpactToggle)
-            ];
+            let mut list_items = Vec::new();
+
+            let create_item = |label: &str, is_selected: bool, is_active: bool, is_radio: bool| {
+                let check = if is_radio {
+                    if is_active { "(o)" } else { "( )" }
+                } else {
+                    if is_active { "[x]" } else { "[ ]" }
+                };
+
+                let content = format!("{} {}", check, label);
+                let style = if is_selected {
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+
+                ListItem::new(content).style(style)
+            };
+
+            list_items.push(create_item(
+                "enable impact",
+                app.builder.selected_field == BuilderField::ImpactToggle,
+                app.builder.enable_impact,
+                false
+            ));
 
             if app.builder.enable_impact {
-                items.extend_from_slice(&[
-                    ("method: encryption", app.builder.impact_encrypt, BuilderField::ImpactEncrypt),
-                    ("method: wipe", app.builder.impact_wipe, BuilderField::ImpactWipe)
-                ]);
+                list_items.push(create_item(
+                    "encryption",
+                    app.builder.selected_field == BuilderField::ImpactEncrypt,
+                    app.builder.impact_encrypt,
+                    false
+                ));
+
+                if app.builder.impact_encrypt {
+                    list_items.push(create_item(
+                        "   XOR",
+                        app.builder.selected_field == BuilderField::ImpactEncryptAlgoXor,
+                        app.builder.encryption_algo == "XOR",
+                        true
+                    ));
+                    list_items.push(create_item(
+                        "   AES",
+                        app.builder.selected_field == BuilderField::ImpactEncryptAlgoAes,
+                        app.builder.encryption_algo == "AES",
+                        true
+                    ));
+                    list_items.push(create_item(
+                        "   ChaCha20",
+                        app.builder.selected_field == BuilderField::ImpactEncryptAlgoChacha,
+                        app.builder.encryption_algo == "CHACHA",
+                        true
+                    ));
+                }
+
+                list_items.push(create_item(
+                    "wipe",
+                    app.builder.selected_field == BuilderField::ImpactWipe,
+                    app.builder.impact_wipe,
+                    false
+                ));
             }
 
-            render_checkbox_list(f, &app.builder.selected_field, items, chunks[1]);
+            f.render_widget(
+                List::new(list_items).block(Block::default().borders(Borders::ALL)),
+                chunks[1]
+            );
         },
         BuilderCategory::Exfiltration => {
             let mut items = vec![
