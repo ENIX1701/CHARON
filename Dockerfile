@@ -11,12 +11,12 @@ FROM base AS test
 RUN cargo test --release
 
 # === BUILD STAGE ===
-FROM rust:alpine AS builder
+FROM base AS builder
 
 RUN cargo build --release
 
 # === RUNTIME ===
-FROM alpine:edge as runtime
+FROM alpine:edge AS runtime
 
 RUN apk add --no-cache libgcc ca-certificates
 RUN addgroup -S charongroup && adduser -S charonuser -G charongroup
