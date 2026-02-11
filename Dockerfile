@@ -1,17 +1,22 @@
+# === BASE STAGE ===
+FROM rust:alpine AS base
+
+WORKDIR /usr/src/app
+RUN apk add --no-cache musl-dev pkgconfig perl make
+COPY . .
+
+# === TEST STAGE ===
+FROM base AS test
+
+RUN cargo test --release
+
 # === BUILD STAGE ===
 FROM rust:alpine AS builder
 
-WORKDIR /usr/src/app
-
-RUN apk add --no-cache musl-dev pkgconfig perl make
-
-COPY . .
-
-RUN cargo test --release
 RUN cargo build --release
 
 # === RUNTIME ===
-FROM alpine:edge
+FROM alpine:edge as runtime
 
 RUN apk add --no-cache libgcc ca-certificates
 RUN addgroup -S charongroup && adduser -S charonuser -G charongroup
