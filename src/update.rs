@@ -31,7 +31,9 @@ pub enum Command {
         exfil: bool,
         exfil_http: bool,
         exfil_dns: bool
-    }
+    },
+    FetchLootList,
+    DownloadLoot(String, String),   // filename, dest_path
 }
 
 pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
@@ -57,6 +59,7 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                         return Some(Command::FetchTasks(gid.clone()));
                     }
                 },
+                CurrentScreen::Loot => return Some(Command::FetchLootList),
                 _ => {}
             }
         }
@@ -139,7 +142,15 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                 app.builder.build_status_msg = "FAILED".to_string();
                 app.status_message = format!("Error: {}", e);
             }
-        }
+        },
+        Action::ReceiveLootList(result) => match result {
+            Ok(files) => app.loot.files = files,
+            Err(e) => app.status_message = format!("Error fetching loot {}", e)
+        },
+        Action::ReceiveLootDownload(result) => match result {
+            Ok(msg) => app.status_message = msg,
+            Err(e) => app.status_message = format!("Download error {}", e)
+        },
     }
 
     None
@@ -154,7 +165,8 @@ fn handle_nav_up(app: &mut AppState) {
         CurrentScreen::Dashboard => app.dashboard.select_prev(),
         CurrentScreen::Terminal => app.terminal.scroll_up(),
         CurrentScreen::Config => app.config.prev_field(),
-        CurrentScreen::Builder => app.builder.prev_field()
+        CurrentScreen::Builder => app.builder.prev_field(),
+        CurrentScreen::Loot => app.loot.scroll_up(),
     }
 }
 
@@ -167,7 +179,8 @@ fn handle_nav_down(app: &mut AppState) {
         CurrentScreen::Dashboard => app.dashboard.select_next(),
         CurrentScreen::Terminal => app.terminal.scroll_down(),
         CurrentScreen::Config => app.config.next_field(),
-        CurrentScreen::Builder => app.builder.next_field()
+        CurrentScreen::Builder => app.builder.next_field(),
+        CurrentScreen::Loot => app.loot.scroll_down(),
     }
 }
 
@@ -230,6 +243,16 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
                 BuilderField::Url | BuilderField::Port => app.builder.next_field(),
                 _ => handle_builder_toggle(app)
             }
+        },
+        CurrentScreen::Loot => {
+            let filtered = app.loot.filtered_files();
+            if let Some(i) = app.loot.list_state.selected() {
+                if let Some(filename) = filtered.get(i) {
+                    let dest = format!("./{}", filename);
+                    app.status_message = format!("Downloading {}...", filename);
+                    return Some(Command::DownloadLoot(filename.clone(), dest));
+                }
+            }
         }
     }
 
@@ -247,6 +270,10 @@ fn handle_esc(app: &mut AppState) {
         if app.terminal.input_mode {
             app.terminal.input_mode = false;
         }
+    }
+
+    if app.current_screen == CurrentScreen::Loot {
+        app.loot.search_mode = false;
     }
 }
 
@@ -267,6 +294,9 @@ fn handle_backspace(app: &mut AppState) {
             BuilderField::Port => { app.builder.target_port.pop(); },
             _ => {}
         },
+        CurrentScreen::Loot => {
+            if app.loot.search_mode { app.loot.search_query.pop(); }
+        },
         _ => {}
     }
 }
@@ -276,6 +306,7 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
         CurrentScreen::Terminal => app.terminal.input_mode,
         CurrentScreen::Config => c.is_numeric(),
         CurrentScreen::Builder => matches!(app.builder.selected_field, BuilderField::Url | BuilderField::Port),
+        CurrentScreen::Loot => app.loot.search_mode,
         _ => false
     };
 
@@ -326,6 +357,14 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
                     }
                 },
                 _ => {}
+            }
+        },
+        CurrentScreen::Loot => {
+            if app.loot.search_mode {
+                app.loot.search_query.push(c);
+                app.loot.list_state.select(Some(0));
+            } else if c == '/' || c == 's' {
+                app.loot.search_mode = true;
             }
         }
     }

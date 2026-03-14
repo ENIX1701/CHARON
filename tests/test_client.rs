@@ -32,7 +32,7 @@ async fn test_fetch_ghosts() {
 
 #[tokio::test]
 #[serial]
-async fn text_fetch_tasks() {
+async fn test_fetch_tasks() {
     let mut server = mockito::Server::new_async().await;
     setup_env(&server.url());
 
@@ -57,7 +57,7 @@ async fn text_fetch_tasks() {
 
 #[tokio::test]
 #[serial]
-async fn text_send_task() {
+async fn test_send_task() {
     let mut server = mockito::Server::new_async().await;
     setup_env(&server.url());
 
@@ -82,7 +82,7 @@ async fn text_send_task() {
 
 #[tokio::test]
 #[serial]
-async fn text_update_config() {
+async fn test_update_config() {
     let mut server = mockito::Server::new_async().await;
     setup_env(&server.url());
 
@@ -106,7 +106,7 @@ async fn text_update_config() {
 
 #[tokio::test]
 #[serial]
-async fn text_kill_ghost() {
+async fn test_kill_ghost() {
     let mut server = mockito::Server::new_async().await;
     setup_env(&server.url());
 

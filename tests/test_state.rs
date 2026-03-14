@@ -1,6 +1,6 @@
 use charon::models::{Ghost, Task, TaskStatus};
 use charon::state::{
-    AppState, BuilderCategory, BuilderField, BuilderState, ConfigField, ConfigState, CurrentScreen, DashboardState, TerminalState
+    AppState, BuilderCategory, BuilderField, BuilderState, ConfigField, ConfigState, CurrentScreen, DashboardState, TerminalState, LootState
 };
 
 #[test]
@@ -98,7 +98,13 @@ fn test_app_tab_navigation() {
     assert_eq!(app.current_screen, CurrentScreen::Builder);
 
     app.next_tab();
+    assert_eq!(app.current_screen, CurrentScreen::Loot);
+
+    app.next_tab();
     assert_eq!(app.current_screen, CurrentScreen::Dashboard);
+
+    app.prev_tab();
+    assert_eq!(app.current_screen, CurrentScreen::Loot);
 
     app.prev_tab();
     assert_eq!(app.current_screen, CurrentScreen::Builder);
@@ -185,4 +191,20 @@ fn test_terminal_scroll_to_bottom() {
 
     state.scroll_to_bottom();
     assert_eq!(state.list_state.selected(), Some(4));
+}
+
+#[test]
+fn test_loot_scrolling_and_filtering() {
+    let mut state = LootState::default();
+    state.files = vec!["passwords.txt".into(), "id_rsa".into(), "config.json".into()];
+    state.list_state.select(Some(0));
+
+    assert_eq!(state.filtered_files().len(), 3);
+
+    state.scroll_down();
+    assert_eq!(state.list_state.selected(), Some(1));
+
+    state.search_query = "txt".to_string();
+    assert_eq!(state.filtered_files().len(), 1);
+    assert_eq!(state.filtered_files()[0], "passwords.txt");
 }

@@ -40,6 +40,8 @@ pub enum Action {
     ReceiveConfigUpdateResult(Result<String, String>),
     ReceiveKillResult(Result<String, String>),
     ReceiveBuildResult(Result<String, String>),
+    ReceiveLootList(Result<Vec<String>, String>),
+    ReceiveLootDownload(Result<String, String>),
 
     AutoRefresh
 }

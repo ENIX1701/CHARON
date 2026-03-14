@@ -6,7 +6,61 @@ pub enum CurrentScreen {
     Dashboard,
     Terminal,
     Config,
-    Builder
+    Builder,
+    Loot
+}
+
+#[derive(Debug, Clone)]
+pub struct LootState {
+    pub files: Vec<String>,
+    pub list_state: ratatui::widgets::ListState,
+    pub search_query: String,
+    pub search_mode: bool
+}
+
+impl Default for LootState {
+    fn default() -> Self {
+        Self {
+            files: Vec::new(),
+            list_state: ratatui::widgets::ListState::default(),
+            search_query: String::new(),
+            search_mode: false
+        }
+    }
+}
+
+impl LootState {
+    pub fn filtered_files(&self) -> Vec<String> {
+        if self.search_query.is_empty() {
+            self.files.clone()
+        } else {
+            self.files
+                .iter()
+                .filter(|f| f.to_lowercase().contains(&self.search_query.to_lowercase()))
+                .cloned()
+                .collect()
+        }
+    }
+
+    pub fn scroll_up(&mut self) {
+        let filtered_len = self.filtered_files().len();
+        if filtered_len == 0 { return; }
+        let i = match self.list_state.selected() {
+            Some(i) => if i == 0 { 0 } else { i - 1 },
+            None => 0
+        };
+        self.list_state.select(Some(i));
+    }
+
+    pub fn scroll_down(&mut self) {
+        let filtered_len = self.filtered_files().len();
+        if filtered_len == 0 { return; }
+        let i = match self.list_state.selected() {
+            Some(i) => if i >= filtered_len - 1 { i } else { i + 1 },
+            None => 0
+        };
+        self.list_state.select(Some(i));
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -402,6 +456,7 @@ pub struct AppState {
     pub terminal: TerminalState,
     pub config: ConfigState,
     pub builder: BuilderState,
+    pub loot: LootState,
 
     // global flags
     pub show_help: bool,
@@ -417,6 +472,7 @@ impl Default for AppState {
             terminal: TerminalState::default(),
             config: ConfigState::default(),
             builder: BuilderState::default(),
+            loot: LootState::default(),
             show_help: false,
             show_action_menu: false,
             status_message: "READY - press 'h' for help".to_string()
@@ -430,16 +486,18 @@ impl AppState {
             CurrentScreen::Dashboard => CurrentScreen::Terminal,
             CurrentScreen::Terminal => CurrentScreen::Config,
             CurrentScreen::Config => CurrentScreen::Builder,
-            CurrentScreen::Builder => CurrentScreen::Dashboard
+            CurrentScreen::Builder => CurrentScreen::Loot,
+            CurrentScreen::Loot => CurrentScreen::Dashboard
         };
     }
 
     pub fn prev_tab(&mut self) {
         self.current_screen = match self.current_screen {
-            CurrentScreen::Dashboard => CurrentScreen::Builder,
+            CurrentScreen::Dashboard => CurrentScreen::Loot,
             CurrentScreen::Terminal => CurrentScreen::Dashboard,
             CurrentScreen::Config => CurrentScreen::Terminal,
-            CurrentScreen::Builder => CurrentScreen::Config
+            CurrentScreen::Builder => CurrentScreen::Config,
+            CurrentScreen::Loot => CurrentScreen::Builder
         };
     }
 }
