@@ -285,7 +285,12 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
         BuilderCategory::General => {
             let gen_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Length(3)])
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Length(3),
+                    Constraint::Length(3),
+                    Constraint::Min(6)
+                ])
                 .split(chunks[1]);
 
             let get_style = |field: BuilderField| {
@@ -325,6 +330,62 @@ fn render_builder(f: &mut Frame, app: &AppState, area: Rect) {
                     .border_style(get_style(BuilderField::EnableDebug))
                 ),
                 gen_chunks[2]
+            );
+
+            let scenario_desc = match app.builder.scenario_mode.as_str() {
+                "NONE" => "No preset overrides. Configure all modules manually.",
+                "RANSOMWARE" => "Modules: Persistence, Impact (Encrypt), Exfil",
+                "ESPIONAGE" => "Modules: Persistence, Gather, Exfil",
+                "WIPER" => "Modules: Impact (Wipe)",
+                "INFOSTEALER" => "Modules: Gather (SSH, passwd/shadow), Exfil",
+                "APT" => "Modules: Persistence | Sleep 60s, high jitter",
+                "APT29" => "Modules: RunControl Persistence, Gather, Exfil | Sleep 4h",
+                "APT44" => "Modules: Cron Persistence, Impact (Wipe)",
+                "APT38" => "Modules: Gather (SysInfo, SSH), Exfil, Impact (Encrypt)",
+                _ => "Unknown configuration",
+            };
+
+            let modes = ["NONE", "RANSOMWARE", "ESPIONAGE", "WIPER", "INFOSTEALER", "APT", "APT29", "APT44", "APT38"];
+            let mut mode_spans = vec![Span::raw("Available: ")];
+
+            for (i, mode) in modes.iter().enumerate() {
+                if *mode == app.builder.scenario_mode.as_str() {
+                    let color = match *mode {
+                        "NONE" => Color::DarkGray,
+                        "RANSOMWARE" | "WIPER" => Color::Red,
+                        "ESPIONAGE" | "INFOSTEALER" => Color::Yellow,
+                        "APT" | "APT29" | "APT44" | "APT38" => Color::Magenta,
+                        _ => Color::White,
+                    };
+                    mode_spans.push(Span::styled(format!("[{}]", mode), Style::default().fg(color).add_modifier(Modifier::BOLD)));
+                } else {
+                    mode_spans.push(Span::styled(*mode, Style::default().fg(Color::DarkGray)));
+                }
+
+                if i < modes.len() - 1 {
+                    mode_spans.push(Span::raw(" "));
+                }
+            }
+
+            let scenario_text = vec![
+                Line::from(mode_spans),
+                Line::from(""),
+                Line::from(Span::styled(
+                    format!("-> {}", scenario_desc),
+                    Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC)
+                )),
+            ];
+
+            f.render_widget(
+                Paragraph::new(scenario_text)
+                .wrap(ratatui::widgets::Wrap { trim: true })
+                .block(
+                    Block::default()
+                    .borders(Borders::ALL)
+                    .title(" SCENARIO MODE ")
+                    .border_style(get_style(BuilderField::Scenario))
+                ),
+                gen_chunks[3]
             );
         },
         BuilderCategory::Persistence => {

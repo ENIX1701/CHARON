@@ -124,20 +124,21 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
             });
         },
         Command::BuildPayload {
-            url, port, debug,
+            url, port, debug, scenario_mode,
             persistence, persist_runcontrol, persist_service, persist_cron,
             impact, impact_encrypt, encryption_algo, impact_wipe,
             exfil, exfil_http, exfil_dns
         } => {
             let c = client.clone();
             let t = tx.clone();
-            
+
             let target_port = port.parse::<u16>().unwrap_or(9999).to_string();
 
             let req = GhostBuildRequest {
                 target_url: url,
                 target_port,
                 enable_debug: debug,
+                scenario_mode,
                 enable_persistence: persistence,
                 persist_runcontrol,
                 persist_service,

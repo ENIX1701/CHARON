@@ -268,6 +268,8 @@ pub enum BuilderField {
     Url,
     Port,
     EnableDebug,
+
+    Scenario,
     
     // persistence
     PersistToggle,
@@ -301,6 +303,8 @@ pub struct BuilderState {
     pub target_port: String,
     pub enable_debug: bool,
 
+    pub scenario_mode: String,
+
     // persistence
     pub enable_persistence: bool,
     pub persist_runcontrol: bool,
@@ -331,6 +335,8 @@ impl Default for BuilderState {
             target_url: "127.0.0.1".to_string(),
             target_port: "9999".to_string(),
             enable_debug: true,
+
+            scenario_mode: "NONE".to_string(),
 
             // persistence
             enable_persistence: true,
@@ -364,7 +370,8 @@ impl BuilderState {
                 CategorySelect => Url,
                 Url => Port,
                 Port => EnableDebug,
-                EnableDebug => Submit,
+                EnableDebug => Scenario,
+                Scenario => Submit,
                 Submit => CategorySelect,
                 _ => CategorySelect
             },
@@ -409,7 +416,8 @@ impl BuilderState {
                 Url => CategorySelect,
                 Port => Url,
                 EnableDebug => Port,
-                Submit => EnableDebug,
+                Scenario => EnableDebug,
+                Submit => Scenario,
                 _ => CategorySelect
             },
             Persistence => match self.selected_field {

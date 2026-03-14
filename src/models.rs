@@ -67,6 +67,8 @@ pub struct GhostBuildRequest {
         pub target_port: String,
         pub enable_debug: bool,
 
+        pub scenario_mode: String,
+
         // persistence
         pub enable_persistence: bool,
         pub persist_runcontrol: bool,

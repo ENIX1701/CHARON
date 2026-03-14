@@ -15,6 +15,8 @@ pub enum Command {
         port: String,
         debug: bool,
 
+        scenario_mode: String,
+
         // persistence
         persistence: bool,
         persist_runcontrol: bool,
@@ -394,6 +396,13 @@ fn handle_builder_toggle(app: &mut AppState) {
     match app.builder.selected_field {
         EnableDebug => app.builder.enable_debug = !app.builder.enable_debug,
 
+        Scenario => {
+            let modes = ["NONE", "RANSOMWARE", "ESPIONAGE", "WIPER", "INFOSTEALER", "APT", "APT29", "APT44", "APT38"];
+            let current_idx = modes.iter().position(|&m| m == app.builder.scenario_mode).unwrap_or(0);
+            let next_idx = (current_idx + 1) % modes.len();
+            app.builder.scenario_mode = modes[next_idx].to_string();
+        },
+
         PersistToggle => {
             app.builder.enable_persistence = !app.builder.enable_persistence;
 
@@ -443,6 +452,9 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         url: app.builder.target_url.clone(),
         port: app.builder.target_port.clone(),
         debug: app.builder.enable_debug,
+
+        scenario_mode: app.builder.scenario_mode.clone(),
+
         persistence: app.builder.enable_persistence,
         persist_runcontrol: app.builder.persist_runcontrol,
         persist_service: app.builder.persist_service,
