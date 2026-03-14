@@ -66,8 +66,8 @@ pub struct GhostBuildRequest {
         pub target_url: String,
         pub target_port: String,
         pub enable_debug: bool,
-
         pub scenario_mode: String,
+        pub impact_level: String,
 
         // persistence
         pub enable_persistence: bool,
@@ -77,7 +77,6 @@ pub struct GhostBuildRequest {
 
         // impact
         pub enable_impact: bool,
-        pub impact_level: String,
         pub impact_encrypt: bool,
         pub encryption_algo: String,
         pub impact_wipe: bool,

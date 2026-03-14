@@ -268,8 +268,8 @@ pub enum BuilderField {
     Url,
     Port,
     EnableDebug,
-
     Scenario,
+    ImpactLevel,
     
     // persistence
     PersistToggle,
@@ -279,7 +279,6 @@ pub enum BuilderField {
 
     // impact
     ImpactToggle,
-    ImpactLevel,
     ImpactEncrypt,
     ImpactEncryptAlgoXor,
     ImpactEncryptAlgoAes,
@@ -303,8 +302,8 @@ pub struct BuilderState {
     pub target_url: String,
     pub target_port: String,
     pub enable_debug: bool,
-
     pub scenario_mode: String,
+    pub impact_level: String,
 
     // persistence
     pub enable_persistence: bool,
@@ -314,7 +313,6 @@ pub struct BuilderState {
 
     // impact
     pub enable_impact: bool,
-    pub impact_level: String,
     pub impact_encrypt: bool,
     pub encryption_algo: String,
     pub impact_wipe: bool,
@@ -337,8 +335,8 @@ impl Default for BuilderState {
             target_url: "127.0.0.1".to_string(),
             target_port: "9999".to_string(),
             enable_debug: true,
-
             scenario_mode: "NONE".to_string(),
+            impact_level: "TEST".to_string(),
 
             // persistence
             enable_persistence: true,
@@ -348,7 +346,6 @@ impl Default for BuilderState {
 
             // impact
             enable_impact: true,
-            impact_level: "TEST".to_string(),
             impact_encrypt: true,
             encryption_algo: "XOR".to_string(),
             impact_wipe: false,
@@ -374,7 +371,8 @@ impl BuilderState {
                 Url => Port,
                 Port => EnableDebug,
                 EnableDebug => Scenario,
-                Scenario => Submit,
+                Scenario => ImpactLevel,
+                ImpactLevel => Submit,
                 Submit => CategorySelect,
                 _ => CategorySelect
             },
@@ -389,8 +387,7 @@ impl BuilderState {
             },
             Impact => match self.selected_field {
                 CategorySelect => ImpactToggle,
-                ImpactToggle => if self.enable_impact { ImpactLevel } else { Submit },
-                ImpactLevel => ImpactEncrypt,
+                ImpactToggle => if self.enable_impact { ImpactEncrypt } else { Submit },
                 ImpactEncrypt => if self.impact_encrypt { ImpactEncryptAlgoXor } else { ImpactWipe },
                 ImpactEncryptAlgoXor => ImpactEncryptAlgoAes,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoChacha,
@@ -421,7 +418,8 @@ impl BuilderState {
                 Port => Url,
                 EnableDebug => Port,
                 Scenario => EnableDebug,
-                Submit => Scenario,
+                ImpactLevel => Scenario,
+                Submit => ImpactLevel,
                 _ => CategorySelect
             },
             Persistence => match self.selected_field {
@@ -436,8 +434,7 @@ impl BuilderState {
             Impact => match self.selected_field {
                 CategorySelect => Submit,
                 ImpactToggle => CategorySelect,
-                ImpactLevel => ImpactToggle,
-                ImpactEncrypt => if self.enable_impact { ImpactLevel } else { ImpactToggle },
+                ImpactEncrypt => if self.enable_impact { ImpactToggle } else { ImpactToggle },
 
                 ImpactEncryptAlgoXor => ImpactEncrypt,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoXor,

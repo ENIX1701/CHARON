@@ -14,8 +14,8 @@ pub enum Command {
         url: String,
         port: String,
         debug: bool,
-
         scenario_mode: String,
+        impact_level: String,
 
         // persistence
         persistence: bool,
@@ -25,7 +25,6 @@ pub enum Command {
 
         // impact
         impact: bool,
-        impact_level: String,
         impact_encrypt: bool,
         encryption_algo: String,
         impact_wipe: bool,
@@ -462,8 +461,8 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         url: app.builder.target_url.clone(),
         port: app.builder.target_port.clone(),
         debug: app.builder.enable_debug,
-
         scenario_mode: app.builder.scenario_mode.clone(),
+        impact_level: app.builder.impact_level.clone(),
 
         persistence: app.builder.enable_persistence,
         persist_runcontrol: app.builder.persist_runcontrol,
@@ -471,7 +470,6 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         persist_cron: app.builder.persist_cron,
 
         impact: app.builder.enable_impact,
-        impact_level: app.builder.impact_level.clone(),
         impact_encrypt: app.builder.impact_encrypt,
         encryption_algo: app.builder.encryption_algo.clone(),
         impact_wipe: app.builder.impact_wipe,
