@@ -9,7 +9,6 @@ CHARON is divided into five main operational contexts, accessible via tabs.
 Main view. Provides a real-time table of all GHOSTs that have checked in with the server.
 
 - **Monitoring**: ID, hostname, OS and last seen timer
-- **Selection**:  
 - **Entrance to other modules**: select GHOSTs to use in Terminal and Config views :3
 
 ## Terminal

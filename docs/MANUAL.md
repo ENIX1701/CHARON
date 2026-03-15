@@ -119,6 +119,8 @@ CHARON will send the build configuration to SHADOW, that will then compile the b
 
 ### Loot
 
+![](images/charon-loot.png)
+
 This tab allows you to manage data exfiltrated by GHOSTS :3
 
 #### Navigation
