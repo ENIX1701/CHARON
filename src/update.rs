@@ -255,6 +255,8 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
                     let dest = format!("loot/{}", filename);
                     
                     app.status_message = format!("Downloading {}...", filename);
+                    app.loot.search_mode = false;
+
                     return Some(Command::DownloadLoot(filename.clone(), dest));
                 }
             }
