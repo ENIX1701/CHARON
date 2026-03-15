@@ -1,10 +1,8 @@
 use serial_test::serial;
 use charon::client::{C2Client, RealClient};
-use charon::models::{TaskRequest, GhostConfigUpdate};
+use charon::models::{TaskRequest, GhostConfigUpdate, GhostBuildRequest};
 use std::env;
 
-// TODO: fix this test, there's error with parsing the response JSON body?
-// the error was a missing quote. im gonna kms
 #[tokio::test]
 #[serial]
 async fn test_fetch_ghosts() {
@@ -134,4 +132,90 @@ fn setup_env(url: &str) {
         env::set_var("SHADOW_PORT", parsed_url.port().unwrap().to_string());
         env::set_var("SHADOW_API_PATH", "");
     }
+}
+
+#[tokio::test]
+#[serial]
+async fn test_request_build() {
+    let mut server = mockito::Server::new_async().await;
+    setup_env(&server.url());
+
+    let mock = server
+        .mock("POST", "/build")
+        .with_status(200)
+        .with_body(r#""/downloads/Ghost""#)
+        .create_async()
+        .await;
+
+    let client = RealClient::new();
+    let req = GhostBuildRequest {
+        target_url: "127.0.0.1".into(),
+        target_port: "9999".into(),
+        enable_debug: true,
+        scenario_mode: "NONE".into(),
+        impact_level: "TEST".into(),
+        enable_persistence: false,
+        persist_runcontrol: false,
+        persist_service: false,
+        persist_cron: false,
+        enable_impact: false,
+        impact_encrypt: false,
+        encryption_algo: "XOR".into(),
+        impact_wipe: false,
+        enable_exfil: false,
+        exfil_http: false,
+        exfil_dns: false,
+    };
+
+    let result = client.request_build(req).await;
+    mock.assert_async().await;
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("/downloads/Ghost"));
+}
+
+#[tokio::test]
+#[serial]
+async fn test_fetch_loot_list() {
+    let mut server = mockito::Server::new_async().await;
+    setup_env(&server.url());
+
+    let mock = server
+        .mock("GET", "/loot")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"["passwords.txt", "id_rsa"]"#)
+        .create_async()
+        .await;
+
+    let client = RealClient::new();
+    let result = client.fetch_loot_list().await;
+
+    mock.assert_async().await;
+    assert!(result.is_ok());
+    let files = result.unwrap();
+    assert_eq!(files.len(), 2);
+    assert_eq!(files[0], "passwords.txt");
+}
+
+#[tokio::test]
+#[serial]
+async fn test_download_loot() {
+    let mut server = mockito::Server::new_async().await;
+    setup_env(&server.url());
+
+    let mock = server
+        .mock("GET", "/loot/download/test.txt")
+        .with_status(200)
+        .with_body("loot data")
+        .create_async()
+        .await;
+
+    let client = RealClient::new();
+    let dest = std::env::temp_dir().join("test.txt");
+    let result = client.download_loot("test.txt", dest.to_str().unwrap()).await;
+
+    mock.assert_async().await;
+    assert!(result.is_ok());
+
+    let _ = std::fs::remove_file(dest);
 }

@@ -130,3 +130,17 @@ fn test_receive_ghosts_updates_state() {
     assert_eq!(app.dashboard.ghosts.len(), 1);
     assert_eq!(app.dashboard.ghosts[0].id, "test_ghost_1");
 }
+
+#[test]
+fn test_auto_refresh() {
+    let mut app = AppState::default();
+
+    app.current_screen = CurrentScreen::Dashboard;
+    let cmd_1 = update(&mut app, Action::AutoRefresh);
+    assert_eq!(cmd_1, Some(Command::FetchGhosts));
+
+    app.current_screen = CurrentScreen::Terminal;
+    app.terminal.active_ghost_id = Some("active_id".to_string());
+    let cmd_2 = update(&mut app, Action::AutoRefresh);
+    assert_eq!(cmd_2, Some(Command::FetchTasks("active_id".to_string())));
+}
