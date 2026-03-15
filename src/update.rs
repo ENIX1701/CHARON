@@ -212,7 +212,7 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
 
             let parts: Vec<&str> = input.splitn(2, ' ').collect();
             let (command, args) = match parts[0] {
-                "EXEC" | "STOP_HAUNT" | "IMPACT" => (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string()),
+                "EXEC" | "STOP_HAUNT" | "IMPACT" | "EXFIL" | "GATHER" => (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string()),
                 _ => ("EXEC".to_string(), input)
             };
 

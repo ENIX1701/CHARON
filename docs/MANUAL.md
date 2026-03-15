@@ -86,11 +86,50 @@ For what each *Module* does, please refer to [GHOST docs](https://github.com/ENI
 
 ![](images/charon-builder-persistence.png)
 
+#### Scenarios
+
+Scenarios are presets simulating certain threats and/or threat actors. They're described [in the GHOST build docs](https://github.com/ENIX1701/GHOST/blob/main/docs/BUILD.md#scenario-mode). Here is an excerpt from that:
+
+| Option                | Description                                                                                                                                       |
+|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `RANSOMWARE`          | Very noisy. Exfiltrates data and encrypts files.                                                                                                  |
+| `ESPIONAGE`           | Low noise. Gathers host info (sensitive data included!) and exfiltrates it over the C2 channel. Good starting point for simulating [infostealer malware](https://en.wikipedia.org/wiki/Infostealer) or [APT actors](https://www.ibm.com/think/topics/advanced-persistent-threats) :3  |
+| `WIPER`               | Extreme noise. Destroys all files and self-terminates, leaving the system in an unusable state. Used to test EDR detection and reaction speed.    |
+| `INFOSTEALER`         | Steals the info >:3c                                                                                                                              |
+| `APT`                 | Stealhy and hands-on-keyboard'y... Also - very generic                                                                                            |
+| `APT29`               | Long-term espionage. Gathers SSH keys, stablishes RunControl persistence and deploys an undetectable 4-hour beacon interval.                      |
+| `APT44 (SANDWORM)`    | Pure chaos. Establishes a CRON job to survive reboots and immediately wipes the system. Nothing will survive.                                     |
+| `APT38 (LAZARUS)`     | Two stage extortion. Silent harvesting of system data and SSH keys only to drop a screaming ransomware to mask the espionage.                     |
+
+#### Impact level
+
+Described in detail in [GHOST build docs](https://github.com/ENIX1701/GHOST/blob/main/docs/BUILD.md#impact-severity). The summary is as follows:
+
+| Severity          | Description                                                                                           |
+|-------------------|-------------------------------------------------------------------------------------------------------|
+| `TEST` (default)  | The safe mode. Boring and predictable. Uses dummy files to simulate functionality.                    |
+| `USER`            | Contained to user-level data. Can be destructive, but only withing the realms of a single user.       |
+| `SYSTEM`          | System-level impact. Can deem the machine unusable and irrecoverable. Use with **EXTREME** caution.   |
+
 #### Resulting binary
 
 Once configured, select `[ COMPILE PAYLOAD ]`.
 
 CHARON will send the build configuration to SHADOW, that will then compile the binary and make it available for download. The download path will be displayed in the status bar upon success.
+
+### Loot
+
+This tab allows you to manage data exfiltrated by GHOSTS :3
+
+#### Navigation
+
+|Key            | Action                                                            |
+|---------------|-------------------------------------------------------------------|
+| `/` or `s`    | Enter search mode to filter files by name                         |
+| `ESC`         | Exit search mode                                                  |
+| `↑/↓`         | Navigate up/down                                                  |
+| `ENTER`       | Download the selected file to the local `loot/` directory         |
+| `r`           | Refresh the loot list                                             |
 
 ## Status indicators
 

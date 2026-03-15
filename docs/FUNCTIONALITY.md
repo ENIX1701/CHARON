@@ -1,6 +1,6 @@
 # Functionality
 
-CHARON is divided into four main operational contexts, accessible via tabs.
+CHARON is divided into five main operational contexts, accessible via tabs.
 
 ## Dashboard
 
@@ -24,6 +24,8 @@ Allows direct interaction with the selected GHOST.
     - **Implicit**: not typing an explicit command defaults to `EXEC`. For example, if you type `whoami`, CHARON will send `EXEC whoami` to SHADOW
     - **Explicit**:
         - `EXEC <command>` - execute a shell command 
+        - `GATHER` - triggers the configured [`Gathering`](https://github.com/ENIX1701/GHOST/blob/main/docs/FUNCTIONALITY.md#gathering) module
+        - `EXFIL` - triggers the configured [`Exfiltration`](https://github.com/ENIX1701/GHOST/blob/main/docs/FUNCTIONALITY.md#exfiltration) module
         - `IMPACT` - triggers the configured [`Impact`](https://github.com/ENIX1701/GHOST/blob/main/docs/FUNCTIONALITY.md#impact) module (be **VERY CAREFUL** with this one)
         - `STOP_HAUNT` - kills the GHOST. You can also do that on the dashboard panel, by pressing `x`, selecting the *kill GHOST* option and pressing `enter`
 
@@ -48,3 +50,13 @@ You can build GHOSTs with it. More extensive documentation can be found [here](h
 You can control which modules, and which tactics in these modules are enabled. Full control. Always.
 
 ![](images/charon-builder-impact.png)
+
+## Loot
+
+![](images/charon-loot.png)
+
+Information! Data! Shinyy!!
+
+This tab operates on data exfiltrated by the GHOSTs. It offers the following functionality:
+- **Search**: lets you search things. that's about it...
+- **Download**: pressing `enter` on a selected file automatically downloads it to your local `loot/` directory
