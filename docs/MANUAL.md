@@ -36,7 +36,27 @@ This is the default view. It displays all GHOSTs connected to the SHADOW server 
 | `d`       | Reset replay state                |
 | `enter`   | Open selected GHOST in Terminal   |
 
-#### Replay presets
+#### Replay mode
+
+Dashboard includes a replay control panel on the right side. Replay mode is a SHADOW-driven demo system that simulates GHOST activity without requiring real implants. It's meant for safe walkthroughs, UI testing, onboarding and quick demos.
+
+##### What it does
+
+When replay mode is started, SHADOW creates synthetic GHOST entries and exposes them through the same API routes that are used for normal operation. CHARON then displays these replay GHOSTs in the main Dashboard table next to live ones.
+
+GHOSTs are clearly marked in the `SOURCE` column as:
+- `LIVE` for regular GHOSTs
+- `REPLAY` for synthetic entries
+
+This means the normal operator flow still works:
+- you can select a replay GHOST from the Dashboard
+- open it in Terminal
+- send commands (although a limited set!)
+- change configuration
+- observe task history
+- browse replay-generated loot in the Loot tab
+
+##### Presets
 
 | Preset        | Action                                                        |
 |---------------|---------------------------------------------------------------|
