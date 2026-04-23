@@ -15,7 +15,9 @@ These controls apply regardless of the currently active tab.
 
 ## Tabs
 
-The interface is comprised of 4 main tabs. Each of them serves a unique purpose, but may depend on the state of another one. These relations will be outlined in the respective section for each. 
+The interface is comprised of 5 main tabs. Each of them serves a unique purpose, but may depend on the state of another one. These relations will be outlined in the respective section for each. 
+
+Dashboard now includes a replay control panel. It's located on the right side. Replay mode is a safe demo feature driven by SHADOW presets. Replayed ghosts are shown in the main table with `SOURCE = REPLAY`, while real ghosts are shown as `LIVE`.
 
 ### Dashboard
 
@@ -25,10 +27,25 @@ This is the default view. It displays all GHOSTs connected to the SHADOW server 
 
 #### Navigation
 
-|Key    | Action        |
-|-------|---------------|
-| `x`   | GHOST actions |
-| `r`   | Force refresh |
+| Key       | Action                            |
+|-----------|-----------------------------------|
+| `x`       | GHOST actions                     |
+| `r`       | Force refresh                     |
+| `p`       | Cycle replay preset               |
+| `s`       | Start or stop replay              |
+| `d`       | Reset replay state                |
+| `enter`   | Open selected GHOST in Terminal   |
+
+#### Replay presets
+
+| Preset        | Action                                                        |
+|---------------|---------------------------------------------------------------|
+| `idle_fleet`  | Spawns a few idle replay ghosts for a quiet dashboard demo    |
+| `task_flow`   | Spawns replay ghosts with task history                        |
+| `loot_burst`  | Spawns replay ghosts that generate synthetic loot             |
+
+> [!NOTE]
+> Replay mode never executes real commands. It simulates (mocks) GHOST activity, task output and loot for demo and testing purposes
 
 ### Terminal
 

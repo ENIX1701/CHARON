@@ -1,6 +1,6 @@
 use charon::action::Action;
 use charon::client::{C2Client, RealClient};
-use charon::models::GhostBuildRequest;
+use charon::models::{GhostBuildRequest, ReplayStartRequest};
 use charon::state::AppState;
 use charon::ui;
 use charon::update::{self, Command};
@@ -77,8 +77,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             last_tick = Instant::now();
         }
     }
-
-    Ok(())
 }
 
 async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender<Action>) {
@@ -186,6 +184,38 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 tx.send(Action::ReceiveLootDownload(res))
                     .await
                     .unwrap_or(());
+            });
+        }
+        Command::FetchReplayStatus => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.fetch_replay_status().await;
+                let _ = tx.send(Action::ReceiveReplayStatus(res)).await;
+            });
+        }
+        Command::StartReplay(ReplayStartRequest { scenario }) => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.start_replay(ReplayStartRequest { scenario }).await;
+                let _ = tx.send(Action::ReceiveReplayStatus(res)).await;
+            });
+        }
+        Command::StopReplay => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.stop_replay().await;
+                let _ = tx.send(Action::ReceiveReplayStatus(res)).await;
+            });
+        }
+        Command::ResetReplay => {
+            let client = client.clone();
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let res = client.reset_replay().await;
+                let _ = tx.send(Action::ReceiveReplayStatus(res)).await;
             });
         }
         Command::Quit => {

@@ -1,5 +1,5 @@
 use crate::action::Action;
-use crate::models::{GhostConfigUpdate, TaskRequest};
+use crate::models::{GhostConfigUpdate, ReplayStartRequest, TaskRequest, TaskStatus};
 use crate::state::{AppState, BuilderField, ConfigField, CurrentScreen};
 
 #[derive(Debug, PartialEq)]
@@ -42,6 +42,10 @@ pub enum Command {
     },
     FetchLootList,
     DownloadLoot(String, String), // filename, dest_path
+    FetchReplayStatus,
+    StartReplay(ReplayStartRequest),
+    StopReplay,
+    ResetReplay,
 }
 
 pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
@@ -106,6 +110,33 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                 return Some(Command::KillGhost(gid));
             }
         }
+        Action::ReplayNextScenario => {
+            if app.current_screen == CurrentScreen::Dashboard {
+                app.dashboard.replay.next_scenario();
+                app.status_message = format!(
+                    "Replay preset selected: {}",
+                    app.dashboard.replay.selected_scenario()
+                );
+            }
+        }
+        Action::ReplayStartStop => {
+            if app.current_screen == CurrentScreen::Dashboard {
+                if app.dashboard.replay.running {
+                    app.status_message = "Stopping replay...".to_string();
+                    return Some(Command::StopReplay);
+                } else {
+                    let scenario = app.dashboard.replay.selected_scenario();
+                    app.status_message = format!("Starting replay scenario '{}'...", scenario);
+                    return Some(Command::StartReplay(ReplayStartRequest { scenario }));
+                }
+            }
+        }
+        Action::ReplayReset => {
+            if app.current_screen == CurrentScreen::Dashboard {
+                app.status_message = "Resetting replay scenario...".to_string();
+                return Some(Command::ResetReplay);
+            }
+        }
         Action::SubmitGhostConfig => return handle_config_submit(app),
         Action::ToggleBuilderSwitch => handle_builder_toggle(app),
         Action::StartBuild => return handle_build_start(app),
@@ -116,6 +147,10 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                 app.dashboard.ghosts = ghosts;
                 app.status_message =
                     format!("Updated: {} ghosts online", app.dashboard.ghosts.len());
+
+                if app.current_screen == CurrentScreen::Dashboard {
+                    return Some(Command::FetchReplayStatus);
+                }
             }
             Err(e) => app.status_message = format!("Error fetching ghosts: {}", e),
         },
@@ -169,6 +204,21 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         Action::ReceiveLootDownload(result) => match result {
             Ok(msg) => app.status_message = msg,
             Err(e) => app.status_message = format!("Download error {}", e),
+        },
+        Action::ReceiveReplayStatus(result) => match result {
+            Ok(status) => {
+                app.dashboard.replay.apply_status(&status);
+                let current = status
+                    .current_scenario
+                    .unwrap_or_else(|| "none".to_string());
+                app.status_message = format!(
+                    "Replay {} | preset {} | ghosts {}",
+                    if status.running { "running" } else { "stopped" },
+                    current,
+                    status.replay_ghost_count
+                );
+            }
+            Err(e) => app.status_message = format!("Replay status error: {}", e),
         },
     }
 
@@ -293,10 +343,8 @@ fn handle_esc(app: &mut AppState) {
         return;
     }
 
-    if app.current_screen == CurrentScreen::Terminal {
-        if app.terminal.input_mode {
-            app.terminal.input_mode = false;
-        }
+    if app.current_screen == CurrentScreen::Terminal && app.terminal.input_mode {
+        app.terminal.input_mode = false;
     }
 
     if app.current_screen == CurrentScreen::Loot {
@@ -371,6 +419,18 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
 
             if c == 'r' {
                 return Some(Command::FetchGhosts);
+            }
+
+            if c == 'p' {
+                return update(app, Action::ReplayNextScenario);
+            }
+
+            if c == 's' {
+                return update(app, Action::ReplayStartStop);
+            }
+
+            if c == 'd' {
+                return update(app, Action::ReplayReset);
             }
         }
         CurrentScreen::Terminal => {
@@ -533,4 +593,11 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
         exfil_http: app.builder.exfil_http,
         exfil_dns: app.builder.exfil_dns,
     })
+}
+
+pub fn task_is_complete(status: TaskStatus) -> bool {
+    matches!(
+        status,
+        TaskStatus::Done | TaskStatus::Success | TaskStatus::Failed
+    )
 }

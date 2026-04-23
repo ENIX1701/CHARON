@@ -1,5 +1,5 @@
 use charon::action::Action;
-use charon::models::Ghost;
+use charon::models::{Ghost, ReplayStatus};
 use charon::state::{AppState, BuilderField, ConfigField, CurrentScreen};
 use charon::update::{Command, update};
 
@@ -121,8 +121,10 @@ fn test_builder_start_build() {
 }
 
 #[test]
-fn test_receive_ghosts_updates_state() {
+fn test_receive_ghosts_updates_state_and_fetches_replay_status_on_dashboard() {
     let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Dashboard;
+
     let ghosts = vec![Ghost {
         id: "test_ghost_1".to_string(),
         hostname: "hostname".to_string(),
@@ -131,10 +133,30 @@ fn test_receive_ghosts_updates_state() {
         is_replay: false,
     }];
 
-    update(&mut app, Action::ReceiveGhosts(Ok(ghosts)));
+    let command = update(&mut app, Action::ReceiveGhosts(Ok(ghosts)));
 
     assert_eq!(app.dashboard.ghosts.len(), 1);
     assert_eq!(app.dashboard.ghosts[0].id, "test_ghost_1");
+    assert_eq!(command, Some(Command::FetchReplayStatus));
+}
+
+#[test]
+fn test_receive_ghosts_updates_state_without_replay_fetch_off_dashboard() {
+    let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Terminal;
+
+    let ghosts = vec![Ghost {
+        id: "test_ghost_1".to_string(),
+        hostname: "hostname".to_string(),
+        os: "linux".to_string(),
+        last_seen: 0,
+        is_replay: false,
+    }];
+
+    let command = update(&mut app, Action::ReceiveGhosts(Ok(ghosts)));
+
+    assert_eq!(app.dashboard.ghosts.len(), 1);
+    assert_eq!(command, None);
 }
 
 #[test]
@@ -149,4 +171,78 @@ fn test_auto_refresh() {
     app.terminal.active_ghost_id = Some("active_id".to_string());
     let cmd_2 = update(&mut app, Action::AutoRefresh);
     assert_eq!(cmd_2, Some(Command::FetchTasks("active_id".to_string())));
+}
+
+#[test]
+fn test_dashboard_replay_next_scenario() {
+    let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Dashboard;
+
+    let command = update(&mut app, Action::ReplayNextScenario);
+
+    assert_eq!(command, None);
+    assert_eq!(app.dashboard.replay.selected_scenario(), "task_flow");
+}
+
+#[test]
+fn test_dashboard_replay_start_stop_start_path() {
+    let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Dashboard;
+    app.dashboard.replay.running = false;
+    app.dashboard.replay.selected_scenario_idx = 1;
+
+    let command = update(&mut app, Action::ReplayStartStop);
+
+    match command {
+        Some(Command::StartReplay(req)) => {
+            assert_eq!(req.scenario, "task_flow");
+        }
+        _ => panic!("Expected StartReplay command"),
+    }
+}
+
+#[test]
+fn test_dashboard_replay_start_stop_stop_path() {
+    let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Dashboard;
+    app.dashboard.replay.running = true;
+
+    let command = update(&mut app, Action::ReplayStartStop);
+    assert_eq!(command, Some(Command::StopReplay));
+}
+
+#[test]
+fn test_dashboard_replay_reset() {
+    let mut app = AppState::default();
+    app.current_screen = CurrentScreen::Dashboard;
+
+    let command = update(&mut app, Action::ReplayReset);
+    assert_eq!(command, Some(Command::ResetReplay));
+}
+
+#[test]
+fn test_receive_replay_status_updates_dashboard_state() {
+    let mut app = AppState::default();
+
+    let status = ReplayStatus {
+        running: true,
+        current_scenario: Some("loot_burst".to_string()),
+        available_scenarios: vec![
+            "idle_fleet".to_string(),
+            "task_flow".to_string(),
+            "loot_burst".to_string(),
+        ],
+        replay_ghost_count: 3,
+    };
+
+    let command = update(&mut app, Action::ReceiveReplayStatus(Ok(status)));
+    assert_eq!(command, None);
+
+    assert!(app.dashboard.replay.running);
+    assert_eq!(
+        app.dashboard.replay.current_scenario.as_deref(),
+        Some("loot_burst")
+    );
+    assert_eq!(app.dashboard.replay.replay_ghost_count, 3);
+    assert_eq!(app.dashboard.replay.selected_scenario(), "loot_burst");
 }

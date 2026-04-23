@@ -68,7 +68,12 @@ fn render_header(f: &mut Frame, app: &AppState, area: Rect) {
 }
 
 fn render_dashboard(f: &mut Frame, app: &AppState, area: Rect) {
-    let header_cells = ["ID", "HOSTNAME", "OS", "LAST SEEN", "STATUS"]
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+        .split(area);
+
+    let header_cells = ["ID", "HOSTNAME", "OS", "LAST SEEN", "STATUS", "SOURCE"]
         .iter()
         .map(|h| {
             Cell::from(*h).style(
@@ -82,11 +87,17 @@ fn render_dashboard(f: &mut Frame, app: &AppState, area: Rect) {
     let rows = app.dashboard.ghosts.iter().map(|ghost| {
         let now = chrono::Utc::now().timestamp();
         let diff = now - ghost.last_seen;
-        let (status_str, color) = if diff < 60 {
+        let (status_str, status_color) = if diff < 60 {
             // make this configurable with GHOST beaconing rate * 3
             ("ACTIVE", Color::Green)
         } else {
             ("SILENT", Color::Red)
+        };
+
+        let (source_str, source_color) = if ghost.is_replay {
+            ("REPLAY", Color::Magenta)
+        } else {
+            ("LIVE", Color::DarkGray)
         };
 
         let cells = vec![
@@ -94,19 +105,21 @@ fn render_dashboard(f: &mut Frame, app: &AppState, area: Rect) {
             Cell::from(ghost.hostname.clone()),
             Cell::from(ghost.os.clone()),
             Cell::from(format!("{}s ago", diff)),
-            Cell::from(status_str).style(Style::default().fg(color)),
+            Cell::from(status_str).style(Style::default().fg(status_color)),
+            Cell::from(source_str).style(Style::default().fg(source_color)),
         ];
         Row::new(cells).height(1)
     });
 
-    let t = Table::new(
+    let table = Table::new(
         rows,
         [
             Constraint::Percentage(15),
             Constraint::Percentage(25),
             Constraint::Percentage(15),
-            Constraint::Percentage(20),
-            Constraint::Percentage(25),
+            Constraint::Percentage(15),
+            Constraint::Percentage(15),
+            Constraint::Percentage(15),
         ],
     )
     .header(header)
@@ -123,7 +136,122 @@ fn render_dashboard(f: &mut Frame, app: &AppState, area: Rect) {
     .highlight_symbol(">> ");
 
     let mut state = app.dashboard.table_state.clone();
-    f.render_stateful_widget(t, area, &mut state);
+    f.render_stateful_widget(table, chunks[0], &mut state);
+
+    render_replay_panel(f, app, chunks[1]);
+}
+
+fn render_replay_panel(f: &mut Frame, app: &AppState, area: Rect) {
+    let replay = &app.dashboard.replay;
+
+    let status_color = if replay.running {
+        Color::Green
+    } else {
+        Color::DarkGray
+    };
+
+    let current_scenario = replay
+        .current_scenario
+        .clone()
+        .unwrap_or_else(|| "none".to_string());
+
+    let lines = vec![
+        Line::from(vec![
+            Span::raw("Selected preset: "),
+            Span::styled(
+                replay.selected_scenario(),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw("Active scenario: "),
+            Span::styled(
+                current_scenario,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw("Replay status: "),
+            Span::styled(
+                if replay.running { "RUNNING" } else { "STOPPED" },
+                Style::default()
+                    .fg(status_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw("Replay ghosts: "),
+            Span::styled(
+                replay.replay_ghost_count.to_string(),
+                Style::default()
+                    .fg(Color::Magenta)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Presets",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "{} idle_fleet",
+            if replay.selected_scenario() == "idle_fleet" {
+                ">"
+            } else {
+                " "
+            }
+        )),
+        Line::from(format!(
+            "{} task_flow",
+            if replay.selected_scenario() == "task_flow" {
+                ">"
+            } else {
+                " "
+            }
+        )),
+        Line::from(format!(
+            "{} loot_burst",
+            if replay.selected_scenario() == "loot_burst" {
+                ">"
+            } else {
+                " "
+            }
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Controls",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("[p] cycle preset"),
+        Line::from("[s] start / stop replay"),
+        Line::from("[d] reset replay"),
+        Line::from("[r] refresh ghosts"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Replay mode never executes real commands.",
+            Style::default()
+                .fg(Color::Gray)
+                .add_modifier(Modifier::ITALIC),
+        )),
+    ];
+
+    let panel = Paragraph::new(lines)
+        .wrap(ratatui::widgets::Wrap { trim: true })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" REPLAY CONTROL "),
+        );
+
+    f.render_widget(panel, area);
 }
 
 fn render_terminal(f: &mut Frame, app: &AppState, area: Rect) {
@@ -722,21 +850,31 @@ fn render_help_popup(f: &mut Frame) {
     f.render_widget(Clear, area);
 
     let text = vec![
-        Line::from("=== NAVIGATION ==="),
+        Line::from("=== GLOBAL ==="),
         Line::from(""),
         Line::from("left/right: switch tabs"),
         Line::from("up/down: select item or field"),
-        Line::from("x: open action menu"),
-        Line::from("r: force refresh"),
         Line::from("h: toggle this window"),
         Line::from("q: quit"),
         Line::from(""),
-        Line::from("=== TERMINAL MODE ==="),
+        Line::from("=== DASHBOARD ==="),
+        Line::from("enter: open selected ghost in terminal"),
+        Line::from("x: open ghost action menu"),
+        Line::from("r: force refresh"),
+        Line::from("p: cycle replay preset"),
+        Line::from("s: start or stop replay"),
+        Line::from("d: reset replay"),
+        Line::from(""),
+        Line::from("=== TERMINAL ==="),
         Line::from(""),
         Line::from("i: enter input mode"),
         Line::from("enter: send command"),
         Line::from("esc: exit input mode"),
         Line::from(""),
+        Line::from("=== LOOT ==="),
+        Line::from(""),
+        Line::from("/ or s: enter search mode"),
+        Line::from("enter: download selected file"),
     ];
 
     f.render_widget(

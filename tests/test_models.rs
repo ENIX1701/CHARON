@@ -32,7 +32,7 @@ fn test_ghost_deserialize_defaults_is_replay() {
             "hostname": "host",
             "os": "linux",
             "last_seen": 1000
-        }"#
+        }"#,
     )
     .unwrap();
 

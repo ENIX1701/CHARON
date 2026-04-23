@@ -1,4 +1,4 @@
-use crate::models::{Ghost, Task};
+use crate::models::{Ghost, ReplayStatus, Task};
 use ratatui::widgets::{ListState, TableState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,9 +80,78 @@ impl LootState {
 }
 
 #[derive(Debug, Clone)]
+pub struct ReplayPanelState {
+    pub available_scenarios: Vec<String>,
+    pub selected_scenario_idx: usize,
+    pub running: bool,
+    pub current_scenario: Option<String>,
+    pub replay_ghost_count: usize,
+}
+
+impl Default for ReplayPanelState {
+    fn default() -> Self {
+        Self {
+            available_scenarios: vec![
+                "idle_fleet".to_string(),
+                "task_flow".to_string(),
+                "loot_burst".to_string(),
+            ],
+            selected_scenario_idx: 0,
+            running: false,
+            current_scenario: None,
+            replay_ghost_count: 0,
+        }
+    }
+}
+
+impl ReplayPanelState {
+    pub fn selected_scenario(&self) -> String {
+        self.available_scenarios
+            .get(self.selected_scenario_idx)
+            .cloned()
+            .unwrap_or_else(|| "idle_fleet".to_string())
+    }
+
+    pub fn next_scenario(&mut self) {
+        if self.available_scenarios.is_empty() {
+            self.selected_scenario_idx = 0;
+            return;
+        }
+
+        self.selected_scenario_idx =
+            (self.selected_scenario_idx + 1) % self.available_scenarios.len();
+    }
+
+    pub fn apply_status(&mut self, status: &ReplayStatus) {
+        self.running = status.running;
+        self.current_scenario = status.current_scenario.clone();
+        self.replay_ghost_count = status.replay_ghost_count;
+
+        if !status.available_scenarios.is_empty() {
+            self.available_scenarios = status.available_scenarios.clone();
+
+            if let Some(current) = &self.current_scenario {
+                if let Some(index) = self
+                    .available_scenarios
+                    .iter()
+                    .position(|item| item == current)
+                {
+                    self.selected_scenario_idx = index;
+                } else if self.selected_scenario_idx >= self.available_scenarios.len() {
+                    self.selected_scenario_idx = 0;
+                }
+            } else if self.selected_scenario_idx >= self.available_scenarios.len() {
+                self.selected_scenario_idx = 0;
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DashboardState {
     pub ghosts: Vec<Ghost>,
     pub table_state: TableState,
+    pub replay: ReplayPanelState,
 }
 
 impl Default for DashboardState {
@@ -93,6 +162,7 @@ impl Default for DashboardState {
         Self {
             ghosts: Vec::new(),
             table_state: state,
+            replay: ReplayPanelState::default(),
         }
     }
 }
@@ -492,14 +562,7 @@ impl BuilderState {
             Impact => match self.selected_field {
                 CategorySelect => Submit,
                 ImpactToggle => CategorySelect,
-                ImpactEncrypt => {
-                    if self.enable_impact {
-                        ImpactToggle
-                    } else {
-                        ImpactToggle
-                    }
-                }
-
+                ImpactEncrypt => ImpactToggle,
                 ImpactEncryptAlgoXor => ImpactEncrypt,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoXor,
                 ImpactEncryptAlgoChacha => ImpactEncryptAlgoAes,

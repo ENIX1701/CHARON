@@ -1,4 +1,4 @@
-use crate::models::{Ghost, Task};
+use crate::models::{Ghost, ReplayStatus, Task};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
@@ -26,6 +26,11 @@ pub enum Action {
     OpenActionMenu,
     ConfirmKillGhost,
 
+    // replays
+    ReplayNextScenario,
+    ReplayStartStop,
+    ReplayReset,
+
     // config
     SubmitGhostConfig,
 
@@ -42,6 +47,7 @@ pub enum Action {
     ReceiveBuildResult(Result<String, String>),
     ReceiveLootList(Result<Vec<String>, String>),
     ReceiveLootDownload(Result<String, String>),
+    ReceiveReplayStatus(Result<ReplayStatus, String>),
 
     AutoRefresh,
 }

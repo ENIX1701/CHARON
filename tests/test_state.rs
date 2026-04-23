@@ -1,7 +1,7 @@
-use charon::models::{Ghost, Task, TaskStatus};
+use charon::models::{Ghost, ReplayStatus, Task, TaskStatus};
 use charon::state::{
     AppState, BuilderCategory, BuilderField, BuilderState, ConfigField, ConfigState, CurrentScreen,
-    DashboardState, LootState, TerminalState,
+    DashboardState, LootState, ReplayPanelState, TerminalState,
 };
 
 #[test]
@@ -214,4 +214,40 @@ fn test_loot_scrolling_and_filtering() {
     state.search_query = "txt".to_string();
     assert_eq!(state.filtered_files().len(), 1);
     assert_eq!(state.filtered_files()[0], "passwords.txt");
+}
+
+#[test]
+fn test_replay_panel_next_scenario_wraps() {
+    let mut state = ReplayPanelState::default();
+    assert_eq!(state.selected_scenario(), "idle_fleet");
+
+    state.next_scenario();
+    assert_eq!(state.selected_scenario(), "task_flow");
+
+    state.next_scenario();
+    assert_eq!(state.selected_scenario(), "loot_burst");
+
+    state.next_scenario();
+    assert_eq!(state.selected_scenario(), "idle_fleet");
+}
+
+#[test]
+fn test_replay_panel_apply_status_updates_selection() {
+    let mut state = ReplayPanelState::default();
+
+    state.apply_status(&ReplayStatus {
+        running: true,
+        current_scenario: Some("task_flow".to_string()),
+        available_scenarios: vec![
+            "idle_fleet".to_string(),
+            "task_flow".to_string(),
+            "loot_burst".to_string(),
+        ],
+        replay_ghost_count: 2,
+    });
+
+    assert!(state.running);
+    assert_eq!(state.current_scenario.as_deref(), Some("task_flow"));
+    assert_eq!(state.replay_ghost_count, 2);
+    assert_eq!(state.selected_scenario(), "task_flow");
 }
