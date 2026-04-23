@@ -124,6 +124,7 @@ fn test_builder_start_build() {
 fn test_receive_ghosts_updates_state_and_fetches_replay_status_on_dashboard() {
     let mut app = AppState::default();
     app.current_screen = CurrentScreen::Dashboard;
+    let original_status = app.status_message.clone();
 
     let ghosts = vec![Ghost {
         id: "test_ghost_1".to_string(),
@@ -138,6 +139,7 @@ fn test_receive_ghosts_updates_state_and_fetches_replay_status_on_dashboard() {
     assert_eq!(app.dashboard.ghosts.len(), 1);
     assert_eq!(app.dashboard.ghosts[0].id, "test_ghost_1");
     assert_eq!(command, Some(Command::FetchReplayStatus));
+    assert_eq!(app.status_message, original_status);
 }
 
 #[test]
@@ -193,6 +195,8 @@ fn test_dashboard_replay_start_stop_start_path() {
 
     let command = update(&mut app, Action::ReplayStartStop);
 
+    assert!(app.replay_sync_pending);
+
     match command {
         Some(Command::StartReplay(req)) => {
             assert_eq!(req.scenario, "task_flow");
@@ -208,6 +212,8 @@ fn test_dashboard_replay_start_stop_stop_path() {
     app.dashboard.replay.running = true;
 
     let command = update(&mut app, Action::ReplayStartStop);
+
+    assert!(app.replay_sync_pending);
     assert_eq!(command, Some(Command::StopReplay));
 }
 
@@ -217,12 +223,15 @@ fn test_dashboard_replay_reset() {
     app.current_screen = CurrentScreen::Dashboard;
 
     let command = update(&mut app, Action::ReplayReset);
+
+    assert!(app.replay_sync_pending);
     assert_eq!(command, Some(Command::ResetReplay));
 }
 
 #[test]
-fn test_receive_replay_status_updates_dashboard_state() {
+fn test_receive_replay_status_updates_dashboard_state_without_churning_footer() {
     let mut app = AppState::default();
+    let original_status = app.status_message.clone();
 
     let status = ReplayStatus {
         running: true,
@@ -239,10 +248,31 @@ fn test_receive_replay_status_updates_dashboard_state() {
     assert_eq!(command, None);
 
     assert!(app.dashboard.replay.running);
-    assert_eq!(
-        app.dashboard.replay.current_scenario.as_deref(),
-        Some("loot_burst")
-    );
+    assert_eq!(app.dashboard.replay.current_scenario.as_deref(), Some("loot_burst"));
     assert_eq!(app.dashboard.replay.replay_ghost_count, 3);
     assert_eq!(app.dashboard.replay.selected_scenario(), "loot_burst");
+    assert_eq!(app.status_message, original_status);
+}
+
+#[test]
+fn test_receive_replay_status_after_replay_action_fetches_ghosts_once() {
+    let mut app = AppState::default();
+    app.replay_sync_pending = true;
+
+    let status = ReplayStatus {
+        running: true,
+        current_scenario: Some("task_flow".to_string()),
+        available_scenarios: vec![
+            "idle_fleet".to_string(),
+            "task_flow".to_string(),
+            "loot_burst".to_string(),
+        ],
+        replay_ghost_count: 2,
+    };
+
+    let command = update(&mut app, Action::ReceiveReplayStatus(Ok(status)));
+
+    assert_eq!(command, Some(Command::FetchGhosts));
+    assert!(!app.replay_sync_pending);
+    assert_eq!(app.status_message, "Replay running | preset task_flow | ghosts 2");
 }

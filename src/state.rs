@@ -617,6 +617,7 @@ pub struct AppState {
     pub show_help: bool,
     pub show_action_menu: bool,
     pub status_message: String,
+    pub replay_sync_pending: bool,
 }
 
 impl Default for AppState {
@@ -631,6 +632,7 @@ impl Default for AppState {
             show_help: false,
             show_action_menu: false,
             status_message: "READY - press 'h' for help".to_string(),
+            replay_sync_pending: false,
         }
     }
 }

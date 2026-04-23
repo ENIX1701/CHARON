@@ -30,14 +30,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (tx, mut rx) = mpsc::channel::<Action>(32);
 
     let mut app = AppState::default();
-    let tick_rate = Duration::from_millis(250);
-    let mut last_tick = Instant::now();
+    let ui_tick_rate = Duration::from_millis(250);
+    let refresh_rate = Duration::from_secs(1);
+    let mut last_ui_tick = Instant::now();
+    let mut last_refresh = Instant::now();
 
     loop {
         terminal.draw(|f| ui::draw(f, &app))?;
 
-        let timeout = tick_rate
-            .checked_sub(last_tick.elapsed())
+        let timeout = ui_tick_rate
+            .checked_sub(last_ui_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if crossterm::event::poll(timeout)? {
@@ -68,13 +70,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
 
-        if last_tick.elapsed() >= tick_rate {
+        if last_refresh.elapsed() >= refresh_rate {
             if let Some(command) = update::update(&mut app, Action::AutoRefresh) {
                 process_command(command, client.clone(), tx.clone()).await;
             }
 
+            last_refresh = Instant::now();
+        }
+
+        if last_ui_tick.elapsed() >= ui_tick_rate {
             update::update(&mut app, Action::Tick);
-            last_tick = Instant::now();
+            last_ui_tick = Instant::now();
         }
     }
 }

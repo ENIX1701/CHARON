@@ -121,6 +121,8 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         }
         Action::ReplayStartStop => {
             if app.current_screen == CurrentScreen::Dashboard {
+                app.replay_sync_pending = true;
+
                 if app.dashboard.replay.running {
                     app.status_message = "Stopping replay...".to_string();
                     return Some(Command::StopReplay);
@@ -133,6 +135,7 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         }
         Action::ReplayReset => {
             if app.current_screen == CurrentScreen::Dashboard {
+                app.replay_sync_pending = true;
                 app.status_message = "Resetting replay scenario...".to_string();
                 return Some(Command::ResetReplay);
             }
@@ -145,8 +148,7 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         Action::ReceiveGhosts(result) => match result {
             Ok(ghosts) => {
                 app.dashboard.ghosts = ghosts;
-                app.status_message =
-                    format!("Updated: {} ghosts online", app.dashboard.ghosts.len());
+                sync_dashboard_selection(app);
 
                 if app.current_screen == CurrentScreen::Dashboard {
                     return Some(Command::FetchReplayStatus);
@@ -207,22 +209,41 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         },
         Action::ReceiveReplayStatus(result) => match result {
             Ok(status) => {
-                app.dashboard.replay.apply_status(&status);
                 let current = status
                     .current_scenario
+                    .clone()
                     .unwrap_or_else(|| "none".to_string());
-                app.status_message = format!(
-                    "Replay {} | preset {} | ghosts {}",
-                    if status.running { "running" } else { "stopped" },
-                    current,
-                    status.replay_ghost_count
-                );
+                
+                let needs_ghost_refresh = app.replay_sync_pending;
+
+                app.dashboard.replay.apply_status(&status);
+
+                if needs_ghost_refresh {
+                    app.replay_sync_pending = false;
+                    app.status_message = format!("Replay {} | preset {} | ghosts {}", if status.running { "running" } else { "stopped" }, current, status.replay_ghost_count);
+
+                    return Some(Command::FetchGhosts);
+                }
             }
-            Err(e) => app.status_message = format!("Replay status error: {}", e),
+            Err(e) => {
+                app.replay_sync_pending = false;
+                app.status_message = format!("Replay status error: {}", e);
+            },
         },
     }
 
     None
+}
+
+fn sync_dashboard_selection(app: &mut AppState) {
+    if app.dashboard.ghosts.is_empty() {
+        app.dashboard.table_state.select(None);
+        return;
+    }
+
+    let selected = app.dashboard.table_state.selected().unwrap_or(0);
+    let clamped = selected.min(app.dashboard.ghosts.len() - 1);
+    app.dashboard.table_state.select(Some(clamped));
 }
 
 fn handle_nav_up(app: &mut AppState) {
