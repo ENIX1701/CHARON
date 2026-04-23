@@ -1,6 +1,7 @@
 use charon::models::{Ghost, Task, TaskStatus};
 use charon::state::{
-    AppState, BuilderCategory, BuilderField, BuilderState, ConfigField, ConfigState, CurrentScreen, DashboardState, TerminalState, LootState
+    AppState, BuilderCategory, BuilderField, BuilderState, ConfigField, ConfigState, CurrentScreen,
+    DashboardState, LootState, TerminalState,
 };
 
 #[test]
@@ -13,13 +14,15 @@ fn test_dashboard_selection() {
         id: "1".into(),
         hostname: "hostname".into(),
         os: "os".into(),
-        last_seen: 0
+        last_seen: 0,
+        is_replay: false,
     });
     state.ghosts.push(Ghost {
         id: "2".into(),
         hostname: "hostname".into(),
         os: "os".into(),
-        last_seen: 0
+        last_seen: 0,
+        is_replay: false,
     });
 
     assert_eq!(state.selected_ghost_index(), Some(0));
@@ -45,14 +48,14 @@ fn test_terminal_scrolling() {
         command: "command".into(),
         args: "".into(),
         status: TaskStatus::Pending,
-        result: None
+        result: None,
     });
     state.tasks.push(Task {
         id: "2".into(),
         command: "command".into(),
         args: "".into(),
         status: TaskStatus::Pending,
-        result: None
+        result: None,
     });
 
     state.list_state.select(Some(0));
@@ -62,7 +65,7 @@ fn test_terminal_scrolling() {
 
     state.scroll_down();
     assert_eq!(state.list_state.selected(), Some(1));
-    
+
     state.scroll_up();
     assert_eq!(state.list_state.selected(), Some(0));
 }
@@ -185,7 +188,7 @@ fn test_terminal_scroll_to_bottom() {
             command: "".into(),
             args: "".into(),
             status: TaskStatus::Pending,
-            result: None
+            result: None,
         });
     }
 
@@ -196,7 +199,11 @@ fn test_terminal_scroll_to_bottom() {
 #[test]
 fn test_loot_scrolling_and_filtering() {
     let mut state = LootState::default();
-    state.files = vec!["passwords.txt".into(), "id_rsa".into(), "config.json".into()];
+    state.files = vec![
+        "passwords.txt".into(),
+        "id_rsa".into(),
+        "config.json".into(),
+    ];
     state.list_state.select(Some(0));
 
     assert_eq!(state.filtered_files().len(), 3);

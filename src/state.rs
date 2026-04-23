@@ -7,7 +7,7 @@ pub enum CurrentScreen {
     Terminal,
     Config,
     Builder,
-    Loot
+    Loot,
 }
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct LootState {
     pub files: Vec<String>,
     pub list_state: ratatui::widgets::ListState,
     pub search_query: String,
-    pub search_mode: bool
+    pub search_mode: bool,
 }
 
 impl Default for LootState {
@@ -24,7 +24,7 @@ impl Default for LootState {
             files: Vec::new(),
             list_state: ratatui::widgets::ListState::default(),
             search_query: String::new(),
-            search_mode: false
+            search_mode: false,
         }
     }
 }
@@ -44,20 +44,36 @@ impl LootState {
 
     pub fn scroll_up(&mut self) {
         let filtered_len = self.filtered_files().len();
-        if filtered_len == 0 { return; }
+        if filtered_len == 0 {
+            return;
+        }
         let i = match self.list_state.selected() {
-            Some(i) => if i == 0 { 0 } else { i - 1 },
-            None => 0
+            Some(i) => {
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
         };
         self.list_state.select(Some(i));
     }
 
     pub fn scroll_down(&mut self) {
         let filtered_len = self.filtered_files().len();
-        if filtered_len == 0 { return; }
+        if filtered_len == 0 {
+            return;
+        }
         let i = match self.list_state.selected() {
-            Some(i) => if i >= filtered_len - 1 { i } else { i + 1 },
-            None => 0
+            Some(i) => {
+                if i >= filtered_len - 1 {
+                    i
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
         };
         self.list_state.select(Some(i));
     }
@@ -66,7 +82,7 @@ impl LootState {
 #[derive(Debug, Clone)]
 pub struct DashboardState {
     pub ghosts: Vec<Ghost>,
-    pub table_state: TableState
+    pub table_state: TableState,
 }
 
 impl Default for DashboardState {
@@ -76,7 +92,7 @@ impl Default for DashboardState {
 
         Self {
             ghosts: Vec::new(),
-            table_state: state
+            table_state: state,
         }
     }
 }
@@ -89,10 +105,13 @@ impl DashboardState {
 
         let i = match self.table_state.selected() {
             Some(i) => {
-                if i >= self.ghosts.len() - 1 { 0 }
-                else { i + 1 }
-            },
-            None => 0
+                if i >= self.ghosts.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
         };
 
         self.table_state.select(Some(i));
@@ -105,10 +124,13 @@ impl DashboardState {
 
         let i = match self.table_state.selected() {
             Some(i) => {
-                if i == 0 { self.ghosts.len() - 1 }
-                else { i - 1 }
-            },
-            None => 0
+                if i == 0 {
+                    self.ghosts.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
         };
 
         self.table_state.select(Some(i));
@@ -132,7 +154,7 @@ pub struct TerminalState {
     pub list_state: ListState,
     pub input_buffer: String,
     pub active_ghost_id: Option<String>,
-    pub input_mode: bool
+    pub input_mode: bool,
 }
 
 impl Default for TerminalState {
@@ -142,7 +164,7 @@ impl Default for TerminalState {
             list_state: ListState::default(),
             input_buffer: String::new(),
             active_ghost_id: None,
-            input_mode: false
+            input_mode: false,
         }
     }
 }
@@ -155,10 +177,13 @@ impl TerminalState {
 
         let i = match self.list_state.selected() {
             Some(i) => {
-                if i >= self.tasks.len() - 1 { i }
-                else { i + 1 }
-            },
-            None => 0
+                if i >= self.tasks.len() - 1 {
+                    i
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
         };
 
         self.list_state.select(Some(i));
@@ -171,10 +196,13 @@ impl TerminalState {
 
         let i = match self.list_state.selected() {
             Some(i) => {
-                if i == 0 { 0 }
-                else { i - 1 }
-            },
-            None => 0
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
         };
 
         self.list_state.select(Some(i));
@@ -191,14 +219,14 @@ impl TerminalState {
 pub enum ConfigField {
     Sleep,
     Jitter,
-    Submit
+    Submit,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConfigState {
     pub selected_field: ConfigField,
     pub sleep_input: String,
-    pub jitter_input: String
+    pub jitter_input: String,
 }
 
 impl Default for ConfigState {
@@ -206,7 +234,7 @@ impl Default for ConfigState {
         Self {
             selected_field: ConfigField::Sleep,
             sleep_input: "10".to_string(),
-            jitter_input: "5".to_string()
+            jitter_input: "5".to_string(),
         }
     }
 }
@@ -216,7 +244,7 @@ impl ConfigState {
         self.selected_field = match self.selected_field {
             ConfigField::Sleep => ConfigField::Jitter,
             ConfigField::Jitter => ConfigField::Submit,
-            ConfigField::Submit => ConfigField::Sleep
+            ConfigField::Submit => ConfigField::Sleep,
         };
     }
 
@@ -224,7 +252,7 @@ impl ConfigState {
         self.selected_field = match self.selected_field {
             ConfigField::Sleep => ConfigField::Submit,
             ConfigField::Jitter => ConfigField::Sleep,
-            ConfigField::Submit => ConfigField::Jitter
+            ConfigField::Submit => ConfigField::Jitter,
         };
     }
 }
@@ -234,7 +262,7 @@ pub enum BuilderCategory {
     General,
     Persistence,
     Impact,
-    Exfiltration
+    Exfiltration,
 }
 
 impl BuilderCategory {
@@ -245,7 +273,7 @@ impl BuilderCategory {
             General => Persistence,
             Persistence => Impact,
             Impact => Exfiltration,
-            Exfiltration => General
+            Exfiltration => General,
         }
     }
 
@@ -256,7 +284,7 @@ impl BuilderCategory {
             General => Exfiltration,
             Persistence => General,
             Impact => Persistence,
-            Exfiltration => Impact
+            Exfiltration => Impact,
         }
     }
 }
@@ -270,7 +298,7 @@ pub enum BuilderField {
     EnableDebug,
     Scenario,
     ImpactLevel,
-    
+
     // persistence
     PersistToggle,
     PersistRunControl,
@@ -290,7 +318,7 @@ pub enum BuilderField {
     ExfilHttp,
     ExfilDns,
 
-    Submit
+    Submit,
 }
 
 #[derive(Debug, Clone)]
@@ -321,8 +349,8 @@ pub struct BuilderState {
     pub enable_exfil: bool,
     pub exfil_http: bool,
     pub exfil_dns: bool,
-    
-    pub build_status_msg: String
+
+    pub build_status_msg: String,
 }
 
 impl Default for BuilderState {
@@ -355,15 +383,15 @@ impl Default for BuilderState {
             exfil_http: true,
             exfil_dns: false,
 
-            build_status_msg: "IDLE".to_string()
+            build_status_msg: "IDLE".to_string(),
         }
     }
 }
 
 impl BuilderState {
     pub fn next_field(&mut self) {
-        use BuilderField::*;
         use BuilderCategory::*;
+        use BuilderField::*;
 
         self.selected_field = match self.active_category {
             General => match self.selected_field {
@@ -374,42 +402,66 @@ impl BuilderState {
                 Scenario => ImpactLevel,
                 ImpactLevel => Submit,
                 Submit => CategorySelect,
-                _ => CategorySelect
+                _ => CategorySelect,
             },
             Persistence => match self.selected_field {
                 CategorySelect => PersistToggle,
-                PersistToggle => if self.enable_persistence { PersistRunControl } else { Submit },
+                PersistToggle => {
+                    if self.enable_persistence {
+                        PersistRunControl
+                    } else {
+                        Submit
+                    }
+                }
                 PersistRunControl => PersistService,
                 PersistService => PersistCron,
                 PersistCron => Submit,
                 Submit => CategorySelect,
-                _ => CategorySelect
+                _ => CategorySelect,
             },
             Impact => match self.selected_field {
                 CategorySelect => ImpactToggle,
-                ImpactToggle => if self.enable_impact { ImpactEncrypt } else { Submit },
-                ImpactEncrypt => if self.impact_encrypt { ImpactEncryptAlgoXor } else { ImpactWipe },
+                ImpactToggle => {
+                    if self.enable_impact {
+                        ImpactEncrypt
+                    } else {
+                        Submit
+                    }
+                }
+                ImpactEncrypt => {
+                    if self.impact_encrypt {
+                        ImpactEncryptAlgoXor
+                    } else {
+                        ImpactWipe
+                    }
+                }
                 ImpactEncryptAlgoXor => ImpactEncryptAlgoAes,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoChacha,
                 ImpactEncryptAlgoChacha => ImpactWipe,
                 ImpactWipe => Submit,
                 Submit => CategorySelect,
-                _ => CategorySelect
+                _ => CategorySelect,
             },
             Exfiltration => match self.selected_field {
                 CategorySelect => ExfilToggle,
-                ExfilToggle => if self.enable_exfil { ExfilHttp } else { Submit },
+                ExfilToggle => {
+                    if self.enable_exfil {
+                        ExfilHttp
+                    } else {
+                        Submit
+                    }
+                }
                 ExfilHttp => ExfilDns,
                 ExfilDns => Submit,
                 Submit => CategorySelect,
-                _ => CategorySelect
-            }
+                _ => CategorySelect,
+            },
         };
     }
 
     pub fn prev_field(&mut self) {
-        use BuilderField::*;
         use BuilderCategory::*;
+        use BuilderField::*;
 
         self.selected_field = match self.active_category {
             General => match self.selected_field {
@@ -420,7 +472,7 @@ impl BuilderState {
                 Scenario => EnableDebug,
                 ImpactLevel => Scenario,
                 Submit => ImpactLevel,
-                _ => CategorySelect
+                _ => CategorySelect,
             },
             Persistence => match self.selected_field {
                 CategorySelect => Submit,
@@ -428,30 +480,60 @@ impl BuilderState {
                 PersistRunControl => PersistToggle,
                 PersistService => PersistRunControl,
                 PersistCron => PersistService,
-                Submit => if self.enable_persistence { PersistCron } else { PersistToggle },
-                _ => CategorySelect
+                Submit => {
+                    if self.enable_persistence {
+                        PersistCron
+                    } else {
+                        PersistToggle
+                    }
+                }
+                _ => CategorySelect,
             },
             Impact => match self.selected_field {
                 CategorySelect => Submit,
                 ImpactToggle => CategorySelect,
-                ImpactEncrypt => if self.enable_impact { ImpactToggle } else { ImpactToggle },
+                ImpactEncrypt => {
+                    if self.enable_impact {
+                        ImpactToggle
+                    } else {
+                        ImpactToggle
+                    }
+                }
 
                 ImpactEncryptAlgoXor => ImpactEncrypt,
                 ImpactEncryptAlgoAes => ImpactEncryptAlgoXor,
                 ImpactEncryptAlgoChacha => ImpactEncryptAlgoAes,
 
-                ImpactWipe => if self.impact_encrypt { ImpactEncryptAlgoChacha } else { ImpactEncrypt },
-                Submit => if self.enable_impact { ImpactWipe } else { ImpactToggle },
-                _ => CategorySelect
+                ImpactWipe => {
+                    if self.impact_encrypt {
+                        ImpactEncryptAlgoChacha
+                    } else {
+                        ImpactEncrypt
+                    }
+                }
+                Submit => {
+                    if self.enable_impact {
+                        ImpactWipe
+                    } else {
+                        ImpactToggle
+                    }
+                }
+                _ => CategorySelect,
             },
             Exfiltration => match self.selected_field {
                 CategorySelect => Submit,
                 ExfilToggle => CategorySelect,
                 ExfilHttp => ExfilToggle,
                 ExfilDns => ExfilHttp,
-                Submit => if self.enable_exfil { ExfilDns } else { ExfilToggle },
-                _ => CategorySelect
-            }
+                Submit => {
+                    if self.enable_exfil {
+                        ExfilDns
+                    } else {
+                        ExfilToggle
+                    }
+                }
+                _ => CategorySelect,
+            },
         };
     }
 }
@@ -471,7 +553,7 @@ pub struct AppState {
     // global flags
     pub show_help: bool,
     pub show_action_menu: bool,
-    pub status_message: String
+    pub status_message: String,
 }
 
 impl Default for AppState {
@@ -485,7 +567,7 @@ impl Default for AppState {
             loot: LootState::default(),
             show_help: false,
             show_action_menu: false,
-            status_message: "READY - press 'h' for help".to_string()
+            status_message: "READY - press 'h' for help".to_string(),
         }
     }
 }
@@ -497,7 +579,7 @@ impl AppState {
             CurrentScreen::Terminal => CurrentScreen::Config,
             CurrentScreen::Config => CurrentScreen::Builder,
             CurrentScreen::Builder => CurrentScreen::Loot,
-            CurrentScreen::Loot => CurrentScreen::Dashboard
+            CurrentScreen::Loot => CurrentScreen::Dashboard,
         };
     }
 
@@ -507,7 +589,7 @@ impl AppState {
             CurrentScreen::Terminal => CurrentScreen::Dashboard,
             CurrentScreen::Config => CurrentScreen::Terminal,
             CurrentScreen::Builder => CurrentScreen::Config,
-            CurrentScreen::Loot => CurrentScreen::Builder
+            CurrentScreen::Loot => CurrentScreen::Builder,
         };
     }
 }

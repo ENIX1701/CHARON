@@ -7,10 +7,11 @@ pub enum TaskStatus {
     Pending,
     Sent,
     Running,
+    Done,
     Success,
     Failed,
     #[serde(other)]
-    Unknown
+    Unknown,
 }
 
 impl fmt::Display for TaskStatus {
@@ -19,9 +20,10 @@ impl fmt::Display for TaskStatus {
             TaskStatus::Pending => write!(f, "PENDING"),
             TaskStatus::Sent => write!(f, "SENT"),
             TaskStatus::Running => write!(f, "RUNNING"),
+            TaskStatus::Done => write!(f, "DONE"),
             TaskStatus::Success => write!(f, "SUCCESS"),
             TaskStatus::Failed => write!(f, "FAILED"),
-            TaskStatus::Unknown => write!(f, "UNKNOWN")
+            TaskStatus::Unknown => write!(f, "UNKNOWN"),
         }
     }
 }
@@ -31,7 +33,9 @@ pub struct Ghost {
     pub id: String,
     pub hostname: String,
     pub os: String,
-    pub last_seen: i64
+    pub last_seen: i64,
+    #[serde(default)]
+    pub is_replay: bool,
 }
 
 impl Ghost {
@@ -46,43 +50,56 @@ pub struct Task {
     pub command: String,
     pub args: String,
     pub status: TaskStatus,
-    pub result: Option<String>
+    pub result: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TaskRequest {
     pub command: String,
-    pub args: String
+    pub args: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GhostConfigUpdate {
     pub sleep_interval: i64,
-    pub jitter_percent: i16
+    pub jitter_percent: i16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GhostBuildRequest {
-        pub target_url: String,
-        pub target_port: String,
-        pub enable_debug: bool,
-        pub scenario_mode: String,
-        pub impact_level: String,
+    pub target_url: String,
+    pub target_port: String,
+    pub enable_debug: bool,
+    pub scenario_mode: String,
+    pub impact_level: String,
 
-        // persistence
-        pub enable_persistence: bool,
-        pub persist_runcontrol: bool,
-        pub persist_service: bool,
-        pub persist_cron: bool,
+    // persistence
+    pub enable_persistence: bool,
+    pub persist_runcontrol: bool,
+    pub persist_service: bool,
+    pub persist_cron: bool,
 
-        // impact
-        pub enable_impact: bool,
-        pub impact_encrypt: bool,
-        pub encryption_algo: String,
-        pub impact_wipe: bool,
+    // impact
+    pub enable_impact: bool,
+    pub impact_encrypt: bool,
+    pub encryption_algo: String,
+    pub impact_wipe: bool,
 
-        // exfiltration
-        pub enable_exfil: bool,
-        pub exfil_http: bool,
-        pub exfil_dns: bool
+    // exfiltration
+    pub enable_exfil: bool,
+    pub exfil_http: bool,
+    pub exfil_dns: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReplayStatus {
+    pub running: bool,
+    pub current_scenario: Option<String>,
+    pub available_scenarios: Vec<String>,
+    pub replay_ghost_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReplayStartRequest {
+    pub scenario: String,
 }

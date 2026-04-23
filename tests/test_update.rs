@@ -1,7 +1,7 @@
 use charon::action::Action;
 use charon::models::Ghost;
-use charon::state::{AppState, CurrentScreen, ConfigField, BuilderField};
-use charon::update::{update, Command};
+use charon::state::{AppState, BuilderField, ConfigField, CurrentScreen};
+use charon::update::{Command, update};
 
 #[test]
 fn test_update_quit() {
@@ -29,14 +29,18 @@ fn test_dashboard_enter_selects_ghost() {
         id: "test_ghost_1".to_string(),
         hostname: "hostname".to_string(),
         os: "linux".to_string(),
-        last_seen: 0
+        last_seen: 0,
+        is_replay: false,
     });
     app.dashboard.table_state.select(Some(0));
 
     let command = update(&mut app, Action::Enter);
 
     assert_eq!(app.current_screen, CurrentScreen::Terminal);
-    assert_eq!(app.terminal.active_ghost_id, Some("test_ghost_1".to_string()));
+    assert_eq!(
+        app.terminal.active_ghost_id,
+        Some("test_ghost_1".to_string())
+    );
     assert!(matches!(command, Some(Command::FetchTasks(id)) if id == "test_ghost_1"));
 }
 
@@ -56,8 +60,8 @@ fn test_terminal_input_execution() {
             assert_eq!(ghost_id, "test_ghost_1");
             assert_eq!(req.command, "EXEC");
             assert_eq!(req.args, "ls -la");
-        },
-        _ => panic!("Expected SendTask command")
+        }
+        _ => panic!("Expected SendTask command"),
     }
 
     assert!(app.terminal.input_buffer.is_empty());
@@ -70,7 +74,8 @@ fn test_config_submit() {
         id: "test_ghost_1".to_string(),
         hostname: "hostname".to_string(),
         os: "linux".to_string(),
-        last_seen: 0
+        last_seen: 0,
+        is_replay: false,
     });
     app.dashboard.table_state.select(Some(0));
 
@@ -87,8 +92,8 @@ fn test_config_submit() {
             assert_eq!(ghost_id, "test_ghost_1");
             assert_eq!(config.sleep_interval, 100);
             assert_eq!(config.jitter_percent, 20);
-        },
-        _ => panic!("Expected UpdateGhostConfig command")
+        }
+        _ => panic!("Expected UpdateGhostConfig command"),
     }
 }
 
@@ -122,7 +127,8 @@ fn test_receive_ghosts_updates_state() {
         id: "test_ghost_1".to_string(),
         hostname: "hostname".to_string(),
         os: "linux".to_string(),
-        last_seen: 0
+        last_seen: 0,
+        is_replay: false,
     }];
 
     update(&mut app, Action::ReceiveGhosts(Ok(ghosts)));

@@ -7,8 +7,14 @@ pub enum Command {
     Quit,
     FetchGhosts,
     FetchTasks(String),
-    SendTask { ghost_id: String, req: TaskRequest },
-    UpdateGhostConfig { ghost_id: String, config: GhostConfigUpdate },
+    SendTask {
+        ghost_id: String,
+        req: TaskRequest,
+    },
+    UpdateGhostConfig {
+        ghost_id: String,
+        config: GhostConfigUpdate,
+    },
     KillGhost(String),
     BuildPayload {
         url: String,
@@ -32,27 +38,32 @@ pub enum Command {
         // exfiltration
         exfil: bool,
         exfil_http: bool,
-        exfil_dns: bool
+        exfil_dns: bool,
     },
     FetchLootList,
-    DownloadLoot(String, String),   // filename, dest_path
+    DownloadLoot(String, String), // filename, dest_path
 }
 
 pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
     match action {
         // system
         Action::Quit => return Some(Command::Quit),
-        Action::Tick => {},
-        Action::Resize(_, _) => {},
+        Action::Tick => {}
+        Action::Resize(_, _) => {}
 
         // global navigation
-        Action::NextTab => { app.next_tab(); return None },
+        Action::NextTab => {
+            app.next_tab();
+            return None;
+        }
         Action::PrevTab => app.prev_tab(),
         Action::ToggleHelp => app.show_help = !app.show_help,
 
         // auto refresh
         Action::AutoRefresh => {
-            if app.show_action_menu { return None; }
+            if app.show_action_menu {
+                return None;
+            }
 
             match app.current_screen {
                 CurrentScreen::Dashboard => return Some(Command::FetchGhosts),
@@ -60,7 +71,7 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                     if let Some(gid) = &app.terminal.active_ghost_id {
                         return Some(Command::FetchTasks(gid.clone()));
                     }
-                },
+                }
                 CurrentScreen::Loot => return Some(Command::FetchLootList),
                 _ => {}
             }
@@ -70,7 +81,10 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         Action::Up => handle_nav_up(app),
         Action::Down => handle_nav_down(app),
         Action::Left => app.prev_tab(),
-        Action::Right => { app.next_tab(); return None },
+        Action::Right => {
+            app.next_tab();
+            return None;
+        }
         Action::Enter => return handle_enter(app),
         Action::Esc => handle_esc(app),
         Action::Backspace => handle_backspace(app),
@@ -78,10 +92,12 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
 
         // view-dependent actions
         Action::OpenActionMenu => {
-            if app.current_screen == CurrentScreen::Dashboard && app.dashboard.selected_ghost_id().is_some() {
+            if app.current_screen == CurrentScreen::Dashboard
+                && app.dashboard.selected_ghost_id().is_some()
+            {
                 app.show_action_menu = true;
             }
-        },
+        }
         Action::ConfirmKillGhost => {
             if let Some(gid) = app.dashboard.selected_ghost_id() {
                 app.show_action_menu = false;
@@ -89,7 +105,7 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
 
                 return Some(Command::KillGhost(gid));
             }
-        },
+        }
         Action::SubmitGhostConfig => return handle_config_submit(app),
         Action::ToggleBuilderSwitch => handle_builder_toggle(app),
         Action::StartBuild => return handle_build_start(app),
@@ -98,9 +114,10 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         Action::ReceiveGhosts(result) => match result {
             Ok(ghosts) => {
                 app.dashboard.ghosts = ghosts;
-                app.status_message = format!("Updated: {} ghosts online", app.dashboard.ghosts.len());
-            },
-            Err(e) => app.status_message = format!("Error fetching ghosts: {}", e)
+                app.status_message =
+                    format!("Updated: {} ghosts online", app.dashboard.ghosts.len());
+            }
+            Err(e) => app.status_message = format!("Error fetching ghosts: {}", e),
         },
         Action::ReceiveTasks(result) => match result {
             Ok(tasks) => {
@@ -110,8 +127,8 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                 if should_scroll {
                     app.terminal.scroll_to_bottom();
                 }
-            },
-            Err(e) => app.status_message = format!("Error fetching tasks: {}", e)
+            }
+            Err(e) => app.status_message = format!("Error fetching tasks: {}", e),
         },
         Action::ReceiveTaskSendResult(result) => match result {
             Ok(message) => {
@@ -120,26 +137,26 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
                 if let Some(gid) = app.terminal.active_ghost_id.clone() {
                     return Some(Command::FetchTasks(gid));
                 }
-            },
-            Err(e) => app.status_message = format!("Error: {}", e)
+            }
+            Err(e) => app.status_message = format!("Error: {}", e),
         },
         Action::ReceiveConfigUpdateResult(result) => match result {
             Ok(message) => app.status_message = format!("Config updated: {}", message),
-            Err(e) => app.status_message = format!("Error: {}", e)
+            Err(e) => app.status_message = format!("Error: {}", e),
         },
         Action::ReceiveKillResult(result) => match result {
             Ok(message) => {
                 app.status_message = format!("Kill result: {}", message);
 
                 return Some(Command::FetchGhosts);
-            },
-            Err(e) => app.status_message = format!("Error: {}", e)
+            }
+            Err(e) => app.status_message = format!("Error: {}", e),
         },
         Action::ReceiveBuildResult(result) => match result {
             Ok(message) => {
                 app.builder.build_status_msg = "SUCCESS".to_string();
                 app.status_message = format!("Build success: {}", message)
-            },
+            }
             Err(e) => {
                 app.builder.build_status_msg = "FAILED".to_string();
                 app.status_message = format!("Error: {}", e);
@@ -147,11 +164,11 @@ pub fn update(app: &mut AppState, action: Action) -> Option<Command> {
         },
         Action::ReceiveLootList(result) => match result {
             Ok(files) => app.loot.files = files,
-            Err(e) => app.status_message = format!("Error fetching loot {}", e)
+            Err(e) => app.status_message = format!("Error fetching loot {}", e),
         },
         Action::ReceiveLootDownload(result) => match result {
             Ok(msg) => app.status_message = msg,
-            Err(e) => app.status_message = format!("Download error {}", e)
+            Err(e) => app.status_message = format!("Download error {}", e),
         },
     }
 
@@ -200,7 +217,7 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
 
                 return Some(Command::FetchTasks(gid));
             }
-        },
+        }
         CurrentScreen::Terminal => {
             let input = app.terminal.input_buffer.trim().to_string();
             if input.is_empty() || app.terminal.active_ghost_id.is_none() {
@@ -212,22 +229,25 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
 
             let parts: Vec<&str> = input.splitn(2, ' ').collect();
             let (command, args) = match parts[0] {
-                "EXEC" | "STOP_HAUNT" | "IMPACT" | "EXFIL" | "GATHER" => (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string()),
-                _ => ("EXEC".to_string(), input)
+                "EXEC" | "STOP_HAUNT" | "IMPACT" | "EXFIL" | "GATHER" => (
+                    parts[0].to_string(),
+                    parts.get(1).unwrap_or(&"").to_string(),
+                ),
+                _ => ("EXEC".to_string(), input),
             };
 
             return Some(Command::SendTask {
                 ghost_id,
-                req: TaskRequest { command, args }
+                req: TaskRequest { command, args },
             });
-        },
+        }
         CurrentScreen::Config => {
             if app.config.selected_field == ConfigField::Submit {
                 return handle_config_submit(app);
             } else {
                 app.config.next_field();
             }
-        },
+        }
         CurrentScreen::Builder => {
             if app.builder.selected_field == BuilderField::Submit {
                 return handle_build_start(app);
@@ -243,9 +263,9 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
 
             match app.builder.selected_field {
                 BuilderField::Url | BuilderField::Port => app.builder.next_field(),
-                _ => handle_builder_toggle(app)
+                _ => handle_builder_toggle(app),
             }
-        },
+        }
         CurrentScreen::Loot => {
             let filtered = app.loot.filtered_files();
             if let Some(i) = app.loot.list_state.selected() {
@@ -253,7 +273,7 @@ fn handle_enter(app: &mut AppState) -> Option<Command> {
                     let _ = std::fs::create_dir_all("loot");
 
                     let dest = format!("loot/{}", filename);
-                    
+
                     app.status_message = format!("Downloading {}...", filename);
                     app.loot.search_mode = false;
 
@@ -290,20 +310,30 @@ fn handle_backspace(app: &mut AppState) {
             if app.terminal.input_mode {
                 app.terminal.input_buffer.pop();
             }
-        },
+        }
         CurrentScreen::Config => match app.config.selected_field {
-            ConfigField::Sleep => { app.config.sleep_input.pop(); },
-            ConfigField::Jitter => { app.config.jitter_input.pop(); },
-            _ => {},
+            ConfigField::Sleep => {
+                app.config.sleep_input.pop();
+            }
+            ConfigField::Jitter => {
+                app.config.jitter_input.pop();
+            }
+            _ => {}
         },
         CurrentScreen::Builder => match app.builder.selected_field {
-            BuilderField::Url => { app.builder.target_url.pop(); },
-            BuilderField::Port => { app.builder.target_port.pop(); },
+            BuilderField::Url => {
+                app.builder.target_url.pop();
+            }
+            BuilderField::Port => {
+                app.builder.target_port.pop();
+            }
             _ => {}
         },
         CurrentScreen::Loot => {
-            if app.loot.search_mode { app.loot.search_query.pop(); }
-        },
+            if app.loot.search_mode {
+                app.loot.search_query.pop();
+            }
+        }
         _ => {}
     }
 }
@@ -312,15 +342,21 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
     let is_typing = match app.current_screen {
         CurrentScreen::Terminal => app.terminal.input_mode,
         CurrentScreen::Config => c.is_numeric(),
-        CurrentScreen::Builder => matches!(app.builder.selected_field, BuilderField::Url | BuilderField::Port),
+        CurrentScreen::Builder => matches!(
+            app.builder.selected_field,
+            BuilderField::Url | BuilderField::Port
+        ),
         CurrentScreen::Loot => app.loot.search_mode,
-        _ => false
+        _ => false,
     };
 
     if !is_typing {
         match c {
             'q' => return Some(Command::Quit),
-            'h' => { app.show_help = !app.show_help; return None; },
+            'h' => {
+                app.show_help = !app.show_help;
+                return None;
+            }
             _ => {}
         }
     }
@@ -336,14 +372,14 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
             if c == 'r' {
                 return Some(Command::FetchGhosts);
             }
-        },
+        }
         CurrentScreen::Terminal => {
             if app.terminal.input_mode {
                 app.terminal.input_buffer.push(c);
             } else if c == 'i' {
                 app.terminal.input_mode = true;
             }
-        },
+        }
         CurrentScreen::Config => {
             if c.is_numeric() {
                 match app.config.selected_field {
@@ -352,19 +388,17 @@ fn handle_char_input(app: &mut AppState, c: char) -> Option<Command> {
                     _ => {}
                 }
             }
-        },
-        CurrentScreen::Builder => {
-            match app.builder.selected_field {
-                BuilderField::Url => {
-                    app.builder.target_url.push(c);
-                },
-                BuilderField::Port => {
-                    if c.is_numeric() {
-                        app.builder.target_port.push(c);
-                    }
-                },
-                _ => {}
+        }
+        CurrentScreen::Builder => match app.builder.selected_field {
+            BuilderField::Url => {
+                app.builder.target_url.push(c);
             }
+            BuilderField::Port => {
+                if c.is_numeric() {
+                    app.builder.target_port.push(c);
+                }
+            }
+            _ => {}
         },
         CurrentScreen::Loot => {
             if app.loot.search_mode {
@@ -388,7 +422,10 @@ fn handle_config_submit(app: &mut AppState) -> Option<Command> {
 
         return Some(Command::UpdateGhostConfig {
             ghost_id: gid,
-            config: GhostConfigUpdate { sleep_interval: sleep, jitter_percent: jitter }
+            config: GhostConfigUpdate {
+                sleep_interval: sleep,
+                jitter_percent: jitter,
+            },
         });
     }
 
@@ -402,11 +439,24 @@ fn handle_builder_toggle(app: &mut AppState) {
         EnableDebug => app.builder.enable_debug = !app.builder.enable_debug,
 
         Scenario => {
-            let modes = ["NONE", "RANSOMWARE", "ESPIONAGE", "WIPER", "INFOSTEALER", "APT", "APT29", "APT44", "APT38"];
-            let current_idx = modes.iter().position(|&m| m == app.builder.scenario_mode).unwrap_or(0);
+            let modes = [
+                "NONE",
+                "RANSOMWARE",
+                "ESPIONAGE",
+                "WIPER",
+                "INFOSTEALER",
+                "APT",
+                "APT29",
+                "APT44",
+                "APT38",
+            ];
+            let current_idx = modes
+                .iter()
+                .position(|&m| m == app.builder.scenario_mode)
+                .unwrap_or(0);
             let next_idx = (current_idx + 1) % modes.len();
             app.builder.scenario_mode = modes[next_idx].to_string();
-        },
+        }
 
         PersistToggle => {
             app.builder.enable_persistence = !app.builder.enable_persistence;
@@ -416,7 +466,7 @@ fn handle_builder_toggle(app: &mut AppState) {
                 app.builder.persist_service = false;
                 app.builder.persist_cron = false;
             }
-        },
+        }
         PersistRunControl => app.builder.persist_runcontrol = !app.builder.persist_runcontrol,
         PersistService => app.builder.persist_service = !app.builder.persist_service,
         PersistCron => app.builder.persist_cron = !app.builder.persist_cron,
@@ -428,13 +478,16 @@ fn handle_builder_toggle(app: &mut AppState) {
                 app.builder.impact_encrypt = false;
                 app.builder.impact_wipe = false;
             }
-        },
+        }
         ImpactLevel => {
             let levels = ["TEST", "USER", "SYSTEM"];
-            let current_idx = levels.iter().position(|&l| l == app.builder.impact_level).unwrap_or(0);
+            let current_idx = levels
+                .iter()
+                .position(|&l| l == app.builder.impact_level)
+                .unwrap_or(0);
             let next_idx = (current_idx + 1) % levels.len();
             app.builder.impact_level = levels[next_idx].to_string();
-        },
+        }
         ImpactEncrypt => app.builder.impact_encrypt = !app.builder.impact_encrypt,
 
         ImpactEncryptAlgoXor => app.builder.encryption_algo = "XOR".to_string(),
@@ -448,7 +501,7 @@ fn handle_builder_toggle(app: &mut AppState) {
 
             app.builder.exfil_http = false;
             app.builder.exfil_dns = false;
-        },
+        }
         ExfilHttp => app.builder.exfil_http = !app.builder.exfil_http,
         ExfilDns => app.builder.exfil_dns = !app.builder.exfil_dns,
         _ => {}
@@ -478,6 +531,6 @@ fn handle_build_start(app: &mut AppState) -> Option<Command> {
 
         exfil: app.builder.enable_exfil,
         exfil_http: app.builder.exfil_http,
-        exfil_dns: app.builder.exfil_dns
+        exfil_dns: app.builder.exfil_dns,
     })
 }

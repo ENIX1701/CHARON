@@ -43,5 +43,5 @@ pub enum Action {
     ReceiveLootList(Result<Vec<String>, String>),
     ReceiveLootDownload(Result<String, String>),
 
-    AutoRefresh
+    AutoRefresh,
 }

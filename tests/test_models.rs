@@ -16,9 +16,31 @@ fn test_ghost_is_active() {
         id: "test_ghost".to_string(),
         hostname: "host".to_string(),
         os: "linux".to_string(),
-        last_seen: 1000
+        last_seen: 1000,
+        is_replay: false,
     };
 
     assert!(ghost.is_active(1050, 60));
     assert!(!ghost.is_active(1100, 60));
+}
+
+#[test]
+fn test_ghost_deserialize_defaults_is_replay() {
+    let ghost: Ghost = serde_json::from_str(
+        r#"{
+            "id": "test_ghost",
+            "hostname": "host",
+            "os": "linux",
+            "last_seen": 1000
+        }"#
+    )
+    .unwrap();
+
+    assert!(!ghost.is_replay);
+}
+
+#[test]
+fn test_task_status_done_deserializes() {
+    let status: TaskStatus = serde_json::from_str(r#""done""#).unwrap();
+    assert_eq!(status, TaskStatus::Done);
 }
